@@ -736,6 +736,8 @@ class LLM:
                 **params, stream=False
             )
 
+            #print(f"llm response is: {response}")
+
             # Check if response is valid
             if not response.choices or not response.choices[0].message:
                 print(response)

@@ -23,6 +23,7 @@ class PlanningAgent(ToolCallAgent):
 
     system_prompt: str = PLANNING_SYSTEM_PROMPT
     next_step_prompt: str = NEXT_STEP_PROMPT
+    #next_step_prompt: str = ""
 
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(PlanningTool(), Terminate())
@@ -37,7 +38,7 @@ class PlanningAgent(ToolCallAgent):
     step_execution_tracker: Dict[str, Dict] = Field(default_factory=dict)
     current_step_index: Optional[int] = None
 
-    max_steps: int = 20
+    max_steps: int = 7
 
     @model_validator(mode="after")
     def initialize_plan_and_verify_tools(self) -> "PlanningAgent":
@@ -51,54 +52,28 @@ class PlanningAgent(ToolCallAgent):
 
     async def think(self) -> bool:
         """Decide the next action based on plan status."""
+        """
         prompt = (
-            f"CURRENT PLAN STATUS:\n{await self.get_plan()}\n\n{self.next_step_prompt}"
+            f"当前规划的状态信息:\n{await self.get_plan()}\n"
             if self.active_plan_id
             else self.next_step_prompt
         )
+
         self.messages.append(Message.user_message(prompt))
+        """
 
         # Get the current step index before thinking
-        self.current_step_index = await self._get_current_step_index()
+        #self.current_step_index = await self._get_current_step_index()
 
         result = await super().think()
-
-        # After thinking, if we decided to execute a tool and it's not a planning tool or special tool,
-        # associate it with the current step for tracking
-        if result and self.tool_calls:
-            latest_tool_call = self.tool_calls[0]  # Get the most recent tool call
-            if (
-                latest_tool_call.function.name != "planning"
-                and latest_tool_call.function.name not in self.special_tool_names
-                and self.current_step_index is not None
-            ):
-                self.step_execution_tracker[latest_tool_call.id] = {
-                    "step_index": self.current_step_index,
-                    "tool_name": latest_tool_call.function.name,
-                    "status": "pending",  # Will be updated after execution
-                }
 
         return result
 
     async def act(self) -> str:
         """Execute a step and track its completion status."""
+
+        # 返回 string 是多个工具执行的结果
         result = await super().act()
-
-        # After executing the tool, update the plan status
-        if self.tool_calls:
-            latest_tool_call = self.tool_calls[0]
-
-            # Update the execution status to completed
-            if latest_tool_call.id in self.step_execution_tracker:
-                self.step_execution_tracker[latest_tool_call.id]["status"] = "completed"
-                self.step_execution_tracker[latest_tool_call.id]["result"] = result
-
-                # Update the plan status if this was a non-planning, non-special tool
-                if (
-                    latest_tool_call.function.name != "planning"
-                    and latest_tool_call.function.name not in self.special_tool_names
-                ):
-                    await self.update_plan_status(latest_tool_call.id)
 
         return result
 
@@ -204,16 +179,21 @@ class PlanningAgent(ToolCallAgent):
 
         messages = [
             Message.user_message(
-                f"Analyze the request and create a plan with ID {self.active_plan_id}: {request}"
+                f"仔细分析一下当前的任务需求，使用当前 Plan ID 创建{self.active_plan_id}: {request}"
             )
         ]
         self.memory.add_messages(messages)
+        #logger.info(f"init plan messages is {messages} and sys {self.system_prompt} tools {self.available_tools.to_params()}")
+
         response = await self.llm.ask_tool(
             messages=messages,
             system_msgs=[Message.system_message(self.system_prompt)],
             tools=self.available_tools.to_params(),
             tool_choice=ToolChoice.AUTO,
         )
+
+        #logger.info(f"response is {response}")
+
         assistant_msg = Message.from_tool_calls(
             content=response.content, tool_calls=response.tool_calls
         )
@@ -249,7 +229,7 @@ class PlanningAgent(ToolCallAgent):
 async def main():
     # Configure and run the agent
     agent = PlanningAgent(available_tools=ToolCollection(PlanningTool(), Terminate()))
-    result = await agent.run("Help me plan a trip to the moon")
+    result = await agent.run("我想去新西兰玩3天，一个人预算大概7k，帮我规划一下")
     print(result)
 
 

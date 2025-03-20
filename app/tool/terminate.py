@@ -1,19 +1,18 @@
 from app.tool.base import BaseTool
 
-
-_TERMINATE_DESCRIPTION = """Terminate the interaction when the request is met OR if the assistant cannot proceed further with the task.
-When you have finished all the tasks, call this tool to end the work."""
+_TERMINATE_DESCRIPTION = """当请求得到满足或助手无法继续执行任务时，终止交互。
+当你完成所有任务后，调用此工具以结束工作。"""
 
 
 class Terminate(BaseTool):
-    name: str = "terminate"
+    name: str = "终止工具"
     description: str = _TERMINATE_DESCRIPTION
     parameters: dict = {
         "type": "object",
         "properties": {
             "status": {
                 "type": "string",
-                "description": "The finish status of the interaction.",
+                "description": "交互的完成状态",
                 "enum": ["success", "failure"],
             }
         },

@@ -7,7 +7,7 @@ from app.agent.react import ReActAgent
 from app.exceptions import TokenLimitExceeded
 from app.logger import logger
 from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
-from app.schema import TOOL_CHOICE_TYPE, AgentState, Message, ToolCall, ToolChoice
+from app.schema import TOOL_CHOICE_TYPE, AgentState, Message, ToolCall, ToolChoice, Function
 from app.tool import CreateChatCompletion, Terminate, ToolCollection
 
 
@@ -41,6 +41,12 @@ class ToolCallAgent(ReActAgent):
             user_msg = Message.user_message(self.next_step_prompt)
             self.messages += [user_msg]
 
+        json_dict = []
+        for item in self.messages:
+            json_dict.append(item.to_dict())
+
+        logger.info(f"tool call messages is {json_dict} and sys {self.system_prompt} tools {self.available_tools.to_params()}")
+
         try:
             # Get response with tool options
             response = await self.llm.ask_tool(
@@ -71,9 +77,40 @@ class ToolCallAgent(ReActAgent):
                 return False
             raise
 
-        self.tool_calls = tool_calls = (
-            response.tool_calls if response and response.tool_calls else []
-        )
+        logger.info(f"tool call response is {response}")
+
+        tool_calls = []
+        if response and response.tool_calls:
+            tool_calls = response.tool_calls
+        else:
+            if response and response.content:
+                # 判断结果最后是否包含上述json结构，包含的话，就将json内部的信息解析成 toolcall 的形式加入 curr_tool_calls
+                if "```json" in response.content and response.content.endswith("```"):
+                    json_str = response.content.split("```json")[1].split("```")[0]
+                    try:
+                        json_data = json.loads(json_str)
+                        tool_call = ToolCall(
+                            id="1",
+                            function= Function(
+                                name=json_data["name"],
+                                arguments=json.dumps(json_data["parameters"], ensure_ascii=False),
+                            ),
+                        )
+
+                        tool_calls.append(tool_call)
+                    except json.JSONDecodeError:
+                        logger.error(
+                            f"📝 Oops! The arguments for '{self.name}' don't make sense - invalid JSON, arguments:{response.content}"
+                        )
+                        return False
+                else:
+                    logger.error(
+                        f"📝 Oops! The arguments for '{self.name}' don't make sense - invalid JSON, arguments:{response.content}"
+                    )
+                    return False
+
+        self.tool_calls = tool_calls
+
         content = response.content if response and response.content else ""
 
         # Log response info

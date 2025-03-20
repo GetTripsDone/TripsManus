@@ -5,10 +5,8 @@ from app.exceptions import ToolError
 from app.tool.base import BaseTool, ToolResult
 
 
-_PLANNING_TOOL_DESCRIPTION = """
-A planning tool that allows the agent to create and manage plans for solving complex tasks.
-The tool provides functionality for creating plans, updating plan steps, and tracking progress.
-"""
+_PLANNING_TOOL_DESCRIPTION = """规划工具，允许智能体创建和管理解决复杂任务的计划。
+该工具提供创建计划、更新计划步骤和跟踪进度的功能。"""
 
 
 class PlanningTool(BaseTool):
@@ -23,7 +21,7 @@ class PlanningTool(BaseTool):
         "type": "object",
         "properties": {
             "command": {
-                "description": "The command to execute. Available commands: create, update, list, get, set_active, mark_step, delete.",
+                "description": "要执行的命令。可用命令：create、update、list、get、set_active、mark_step、delete",
                 "enum": [
                     "create",
                     "update",
@@ -36,29 +34,33 @@ class PlanningTool(BaseTool):
                 "type": "string",
             },
             "plan_id": {
-                "description": "Unique identifier for the plan. Required for create, update, set_active, and delete commands. Optional for get and mark_step (uses active plan if not specified).",
+                "description": "规划的唯一标识符。对于 create、update、set_active 、get、mark_step和 delete 命令是必需的",
                 "type": "string",
             },
             "title": {
-                "description": "Title for the plan. Required for create command, optional for update command.",
+                "description": "规划的标题。对于 create、update、set_active、get、mark_step和 delete 命令是必需的",
                 "type": "string",
             },
             "steps": {
-                "description": "List of plan steps. Required for create command, optional for update command.",
+                "description": "规划的步骤列表。对于 create 命令是必需的，对于 update 命令是可选的",
                 "type": "array",
                 "items": {"type": "string"},
             },
             "step_index": {
-                "description": "Index of the step to update (0-based). Required for mark_step command.",
+                "description": "要更新的步骤的索引（从 0 开始）。mark_step 命令必需",
                 "type": "integer",
             },
             "step_status": {
-                "description": "Status to set for a step. Used with mark_step command.",
+                "description": "设置步骤的状态。与 mark_step 命令一起使用",
                 "enum": ["not_started", "in_progress", "completed", "blocked"],
                 "type": "string",
             },
             "step_notes": {
-                "description": "Additional notes for a step. Optional for mark_step command.",
+                "description": "步骤的附加注释。对于 mark_step 命令是可选的",
+                "type": "string",
+            },
+            "step_result": {
+                "description": "步骤执行之后的结果。与 mark_step 命令一起使用",
                 "type": "string",
             },
         },
@@ -148,6 +150,7 @@ class PlanningTool(BaseTool):
             "steps": steps,
             "step_statuses": ["not_started"] * len(steps),
             "step_notes": [""] * len(steps),
+            "step_results": [""] * len(steps),
         }
 
         self.plans[plan_id] = plan
@@ -296,6 +299,14 @@ class PlanningTool(BaseTool):
         if step_status:
             plan["step_statuses"][step_index] = step_status
 
+        if step_status == "in_progress":
+            # 请求 对应的 agent
+            # 获取结果
+            # 结果正常就设置 completed
+            # 结果异常就设置 blocked
+            plan["step_statuses"][step_index] = "completed"
+            plan["step_results"][step_index] = "已完成"
+
         if step_notes:
             plan["step_notes"][step_index] = step_notes
 
@@ -346,8 +357,8 @@ class PlanningTool(BaseTool):
         output += "Steps:\n"
 
         # Add each step with its status and notes
-        for i, (step, status, notes) in enumerate(
-            zip(plan["steps"], plan["step_statuses"], plan["step_notes"])
+        for i, (step, status, notes, results) in enumerate(
+            zip(plan["steps"], plan["step_statuses"], plan["step_notes"], plan["step_results"])
         ):
             status_symbol = {
                 "not_started": "[ ]",
@@ -358,6 +369,8 @@ class PlanningTool(BaseTool):
 
             output += f"{i}. {status_symbol} {step}\n"
             if notes:
-                output += f"   Notes: {notes}\n"
+                output += f"   注释: {notes}\n"
+            if results:
+                output += f"   返回结果: {results}\n"
 
         return output

@@ -11,7 +11,21 @@ model = "deepseek-v3-241226"
 base_url = "https://ark.cn-beijing.volces.com/api/v3"
 api_key = "cb9729a7-aa90-459f-8315-4ae41a6132f3"
 max_tokens = 4096
-temperature = 1.0
+temperature = 0.0
+
+#[llm]
+#model = "qwen2.5-72b-instruct"
+#base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+#api_key = "sk-47884cfea8a4440c8fd42978251d64e7"
+#max_tokens = 4096
+#temperature = 1.0
+
+#[llm]
+#model = "qwen2.5-72b-instruct"
+#base_url = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+#api_key = "sk-47884cfea8a4440c8fd42978251d64e7"
+#max_tokens = 4096
+#temperature = 1.0
 
 # [llm] #AZURE OPENAI:
 # api_type= 'azure'
