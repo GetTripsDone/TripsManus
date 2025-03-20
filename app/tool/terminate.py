@@ -21,4 +21,4 @@ class Terminate(BaseTool):
 
     async def execute(self, status: str) -> str:
         """Finish the current execution"""
-        return f"The interaction has been completed with status: {status}"
+        return f"交互完成，最终的状态是: {status}"
