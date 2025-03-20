@@ -180,7 +180,7 @@ class ToolCallAgent(ReActAgent):
             result = await self.available_tools.execute(name=name, tool_input=args)
 
             # Handle special tools
-            await self._handle_special_tool(name=name, result=result)
+            await self._handle_special_tool(name=name, result=result)  # 特殊工具，terminate
 
             # Check if result is a ToolResult with base64_image
             if hasattr(result, "base64_image") and result.base64_image:
@@ -197,9 +197,9 @@ class ToolCallAgent(ReActAgent):
 
             # Format result for display (standard case)
             observation = (
-                f"Observed output of cmd `{name}` executed:\n{str(result)}"
+                f"执行工具 `{name}` 观测到的结果:\n{str(result)}"
                 if result
-                else f"Cmd `{name}` completed with no output"
+                else f"执行 `{name}` 结束，无返回结果"
             )
 
             return observation

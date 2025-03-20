@@ -1,0 +1,6 @@
+url_search_for_poi = "https://restapi.amap.com/v3/place/text?parameters"
+url_search_for_poi_v2 = "https://restapi.amap.com/v5/place/text?parameters"
+url_search_for_route_drive = "https://restapi.amap.com/v5/direction/driving?parameters"
+url_search_for_route_walk = "https://restapi.amap.com/v5/direction/walking?parameters"
+url_search_for_route_bike = "https://restapi.amap.com/v5/direction/bicycling?parameters"
+url_search_for_route_bus = "https://restapi.amap.com/v5/direction/transit/integrated?parameters"
