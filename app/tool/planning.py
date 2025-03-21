@@ -341,6 +341,10 @@ class PlanningTool(BaseTool):
             agent = RecommendAgent()
             result = await agent.run(request_query)
 
+            # 发送请求到 redis 缓存
+            # sesson id 内存存储的
+            # 数据的结构 需要去和前端的一致
+
             logger.info(f"swarm result: {result}")
 
             response, status = self.parser_response(result)
