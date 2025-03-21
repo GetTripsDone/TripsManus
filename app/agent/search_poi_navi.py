@@ -32,19 +32,9 @@ class SearchPOINavi(ToolCallAgent):
     max_steps: int = 20
 
     # Add general-purpose tools to the tool collection
-    # available_tools: ToolCollection = Field(
-    #     default_factory=lambda: ToolCollection(
-    #         SearchPOI(), SearchRoute(), Terminate()
-    #     )
-    # )
-    # available_tools: ToolCollection = Field(
-    #     default_factory=lambda: ToolCollection(
-    #         SearchPOI(), Terminate()
-    #     )
-    # )
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(
-            SearchRoute(), Terminate()
+            SearchPOI(), SearchRoute(), Terminate()
         )
     )
 
@@ -92,7 +82,7 @@ class SearchPOINavi(ToolCallAgent):
             days_res = json.dumps(self.days, ensure_ascii=False)
             suffix = ''
             if name == '终止工具':
-                suffix = f"\n\n已搜索到的地点、坐标、游玩时间、id、citycode:{pois_res}\n\n已搜索到的days安排:{days_res}"
+                suffix = f"\n\n已搜索到的地点、坐标、游玩时间、id、citycode:{pois_res}\n\n已搜索到的days安排:{days_res}\n\n"
             observation = (
                 f"执行工具 `{name}` 观测到的结果:\n{str(result)}" + suffix
                 if result
