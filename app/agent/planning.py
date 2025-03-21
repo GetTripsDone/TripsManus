@@ -38,7 +38,7 @@ class PlanningAgent(ToolCallAgent):
     step_execution_tracker: Dict[str, Dict] = Field(default_factory=dict)
     current_step_index: Optional[int] = None
 
-    max_steps: int = 7
+    max_steps: int = 2
 
     @model_validator(mode="after")
     def initialize_plan_and_verify_tools(self) -> "PlanningAgent":
@@ -237,3 +237,5 @@ if __name__ == "__main__":
     import asyncio
 
     asyncio.run(main())
+
+    #main()

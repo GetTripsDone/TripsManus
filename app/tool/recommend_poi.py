@@ -41,7 +41,7 @@ class RecommendPOI(BaseTool):
         query = f'规划{city}的{days}天游览行程。'
         try:
             recommendation = await self._call_llm(prompt, query)
-            return {"recommendation": recommendation}
+            return {"景点推荐结果": recommendation}
         except Exception as e:
             print(f"生成景点推荐时发生错误: {e}")
             return {"error": "生成推荐失败，请稍后重试"}

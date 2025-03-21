@@ -1,9 +1,9 @@
 # tool/planning.py
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Tuple
 
 from app.exceptions import ToolError
 from app.tool.base import BaseTool, ToolResult
-
+from app.logger import logger
 
 _PLANNING_TOOL_DESCRIPTION = """规划工具，允许智能体创建和管理解决复杂任务的计划。
 该工具提供创建计划、更新计划步骤和跟踪进度的功能。"""
@@ -52,7 +52,7 @@ class PlanningTool(BaseTool):
             },
             "step_status": {
                 "description": "设置步骤的状态。与 mark_step 命令一起使用",
-                "enum": ["not_started", "in_progress", "completed", "blocked"],
+                "enum": ["not_started", "in_progress", "completed", "blocked", "failed"],
                 "type": "string",
             },
             "step_notes": {
@@ -111,7 +111,7 @@ class PlanningTool(BaseTool):
         elif command == "set_active":
             return self._set_active_plan(plan_id)
         elif command == "mark_step":
-            return self._mark_step(plan_id, step_index, step_status, step_notes)
+            return await self._mark_step(plan_id, step_index, step_status, step_notes)
         elif command == "delete":
             return self._delete_plan(plan_id)
         else:
@@ -257,7 +257,7 @@ class PlanningTool(BaseTool):
             output=f"Plan '{plan_id}' is now the active plan.\n\n{self._format_plan(self.plans[plan_id])}"
         )
 
-    def _mark_step(
+    async def _mark_step(
         self,
         plan_id: Optional[str],
         step_index: Optional[int],
@@ -300,12 +300,13 @@ class PlanningTool(BaseTool):
             plan["step_statuses"][step_index] = step_status
 
         if step_status == "in_progress":
-            # 请求 对应的 agent
-            # 获取结果
-            # 结果正常就设置 completed
-            # 结果异常就设置 blocked
-            plan["step_statuses"][step_index] = "completed"
-            plan["step_results"][step_index] = "已完成"
+            #import asyncio
+            #response, status = asyncio.run(self.run_swarm_agent(plan, step_index))
+
+            response, status = await self.run_swarm_agent(plan, step_index)
+
+            plan["step_statuses"][step_index] = status
+            plan["step_results"][step_index] = response
 
         if step_notes:
             plan["step_notes"][step_index] = step_notes
@@ -313,6 +314,71 @@ class PlanningTool(BaseTool):
         return ToolResult(
             output=f"Step {step_index} updated in plan '{plan_id}'.\n\n{self._format_plan(plan)}"
         )
+
+    async def run_swarm_agent(self, plan: Dict, step_index: int) -> Tuple[str, str]:
+        """Run the swarm agent for a specific step."""
+        """
+        plan = {
+            "plan_id": plan_id,
+            "title": title,
+            "steps": steps,
+            "step_statuses": ["not_started"] * len(steps),
+            "step_notes": [""] * len(steps),
+            "step_results": [""] * len(steps),
+        }
+        """
+        response = "进行中"
+        status = "in_progress"
+
+        from app.agent import RecommendAgent
+
+        request_query = self.format_request_query(plan, step_index)
+        result = ""
+
+        logger.info(f"start swarm query: {request_query} {plan["steps"][step_index]}")
+
+        if "recommend_spots" in plan["steps"][step_index]:
+            agent = RecommendAgent()
+            result = await agent.run(request_query)
+
+            logger.info(f"swarm result: {result}")
+
+            response, status = self.parser_response(result)
+        elif "travel_plan" in plan["steps"][step_index]:
+            agent = RecommendAgent()
+            result = await agent.run(request_query)
+            response, status = self.parser_response(result)
+
+        return response, status
+
+    def parser_response(self, result: str) -> Tuple[str, str]:
+        """Parse the response from the swarm agent."""
+        if result == "":
+            return "失败", "failed"
+
+        response = result
+        status = "failed"
+
+        react_vec = result.split('\n')
+
+        for i in range(len(react_vec)):
+            if "终止工具" in react_vec[i]:
+                if "success" in react_vec[i]:
+                    status = "completed"
+
+        return response, status
+
+    def format_request_query(self, plan: Dict, step_index: int) -> str:
+        """Format the request query for a specific step."""
+
+        ret = ""
+        for i, step in enumerate(plan["steps"]):
+            if i < step_index:
+                ret += f"Step {i+1} 目的: {step}\n 结果: {plan['step_results'][i]}\n"
+            elif i == step_index:
+                ret += f"Step {i+1} 目的: {step}\n"
+
+        return ret
 
     def _delete_plan(self, plan_id: Optional[str]) -> ToolResult:
         """Delete a plan."""

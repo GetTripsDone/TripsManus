@@ -85,7 +85,7 @@ class ToolCallAgent(ReActAgent):
         else:
             if response and response.content:
                 # 判断结果最后是否包含上述json结构，包含的话，就将json内部的信息解析成 toolcall 的形式加入 curr_tool_calls
-                if "```json" in response.content and response.content.endswith("```"):
+                if "```json" in response.content and "```" in response.content:
                     json_str = response.content.split("```json")[1].split("```")[0]
                     try:
                         json_data = json.loads(json_str)
@@ -234,7 +234,7 @@ class ToolCallAgent(ReActAgent):
 
             # Format result for display (standard case)
             observation = (
-                f"执行工具 `{name}` 观测到的结果:\n{str(result)}"
+                f"执行工具 `{name}` 观测到的结果:{str(result)}"
                 if result
                 else f"执行 `{name}` 结束，无返回结果"
             )

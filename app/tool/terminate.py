@@ -1,4 +1,5 @@
 from app.tool.base import BaseTool
+from typing import Dict
 
 _TERMINATE_DESCRIPTION = """当请求得到满足或助手无法继续执行任务时，终止交互。
 当你完成所有任务后，调用此工具以结束工作。"""
@@ -19,6 +20,6 @@ class Terminate(BaseTool):
         "required": ["status"],
     }
 
-    async def execute(self, status: str) -> str:
+    async def execute(self, status: str) -> Dict[str, str]:
         """Finish the current execution"""
-        return f"交互完成，最终的状态是: {status}"
+        return {"终止工具": f"交互完成，最终的状态是: {status}"}

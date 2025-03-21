@@ -1,8 +1,7 @@
 import asyncio
 from typing import Dict
-
+import json
 from openai import OpenAI
-
 from app.tool.base import BaseTool
 
 
@@ -38,12 +37,21 @@ class ArrangeDays(BaseTool):
             Dict[str, list]: 包含每日行程安排的字典，key为dayX格式
         """
         prompt = self._generate_prompt()
+
         try:
             arrangement = await self._call_llm(prompt, {"poi_info": poi_info, "days": days})
-            return arrangement
+
+            # 输出的 字符串可能包含这种json格式，你需要先检验一下，然后提取出json部分
+            if "```json" in arrangement:
+                arrangement = arrangement.split("```json")[1].strip()
+            if "```" in arrangement:
+                arrangement = arrangement.split("```")[0].strip()
+
+            return {"行程安排结果": arrangement}
         except Exception as e:
             print(f"生成行程安排时发生错误: {e}")
             return {"error": "生成行程安排失败，请稍后重试"}
+
 
     def _generate_prompt(self) -> str:
         """
@@ -63,15 +71,16 @@ class ArrangeDays(BaseTool):
 2. 考虑每个景点的游玩时间，确保每天的总游玩时间合理（建议控制在4-8小时之间）
 3. 确保所有景点都被安排，且总天数符合要求
 
-你需要返回一个字典，格式如下：
-{
+# ** 输出格式 **
+
+  {
     "day1": [[景点名称1, 位置1, 游玩时间1, 游玩建议1], [景点名称2, 位置2, 游玩时间2, 游玩建议2]],
     "day2": [[景点名称3, 位置3, 游玩时间3, 游玩建议3], ...],
     ...
-}
+  }
 
-注意事项：
-1. 返回的字典必须是合法的JSON格式
+# ** 注意事项 **
+1. 返回的字典必须是合法的JSON字符串
 2. 每天的景点数量要合理，不要过多或过少
 3. 同一天的景点尽量在地理位置上相近，减少游客在路上花费的时间
 4. 确保每个景点的信息完整，包含名称、位置、时间和建议
@@ -94,8 +103,8 @@ class ArrangeDays(BaseTool):
             model="deepseek-chat",
             messages=[
                 {"role": "system", "content": prompt},
-                {"role": "user", "content": str(data)},
+                {"role": "user", "content": json.dumps(data, ensure_ascii=False)},
             ],
             stream=False
         )
-        return eval(response.choices[0].message.content)
+        return response.choices[0].message.content
