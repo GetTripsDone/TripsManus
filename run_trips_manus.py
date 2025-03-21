@@ -8,12 +8,18 @@ import time
 from app.tool import arrange_days
 from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE
 
-r1 = "deepseek-ai/DeepSeek-R1"
-v3 = "deepseek-ai/DeepSeek-V3"
+#r1 = "deepseek-ai/DeepSeek-R1"
+#v3 = "deepseek-ai/DeepSeek-V3"
+
+r1 = "deepseek-r1-250120"
+v3 = "deepseek-v3-241226"
 
 def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
-    client = OpenAI(api_key="sk-ytpminknxtdkehuanngvpnnspxgfimhllugjqrywwysuknmj",
-                    base_url="https://api.siliconflow.cn/v1")
+    #client = OpenAI(api_key="sk-ytpminknxtdkehuanngvpnnspxgfimhllugjqrywwysuknmj",
+    #                base_url="https://api.siliconflow.cn/v1")
+
+    client = OpenAI(api_key="cb9729a7-aa90-459f-8315-4ae41a6132f3",
+                    base_url="https://ark.cn-beijing.volces.com/api/v3")
 
     if sys_prompt == "":
         response = client.chat.completions.create(
