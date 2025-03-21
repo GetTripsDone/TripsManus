@@ -20,6 +20,7 @@ def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
 
                 stream=False,
                 temperature=1.0,
+                max_tokens=16384,
         )
     else:
         response = client.chat.completions.create(
@@ -31,6 +32,7 @@ def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
 
                 stream=False,
                 temperature=1.0,
+                max_tokens=16384,
         )
 
     #print(f"llm response is {response}")
@@ -41,13 +43,7 @@ def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
     # content role annotations audio
     # refusal function_call tool_calls
 
-    ret = ""
-
-    if request_model == r1:
-        ret = response.choices[0].message.reasoning_content
-    else:
-        ret = response.choices[0].message.content
-
+    ret = response.choices[0].message.content
     return ret
 
 def get_recommend(city: str):
@@ -84,7 +80,7 @@ def get_travel_plan(recommend_scene_str: str, start_time:str, end_time:str) -> s
     return travel_plan_str
 
 def get_daily_plan(travel_plan_str: str) -> str:
-    global r1
+    global v3
     prompt = Daily_Plan_UserPrompt + travel_plan_str
 
     daily_plan_str = call_llm(Daily_Plan_SysPrompt, prompt, v3)
@@ -103,11 +99,11 @@ def main(city: str, start_time: str, end_time: str):
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
     daily_plan_str = get_daily_plan(travel_plan_str)
     # 并行分支 4.1 将每天的行程 返回给端上
-    format_to_show_json = format_show(daily_plan_str)
+    #format_to_show_json = format_show(daily_plan_str)
     # 并行分支 4.2 请求高德路线接口，获取路线结果，返回给端上呈现
-    route_result = get_route_result(daily_plan_str)
+    #route_result = get_route_result(daily_plan_str)
     # 5. 路线结果格式化成返回给端上的格式
-    format_route_result = format_route(route_result)
+    #format_route_result = format_route(route_result)
 
     return
 
