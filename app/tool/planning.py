@@ -330,28 +330,37 @@ class PlanningTool(BaseTool):
         response = "进行中"
         status = "in_progress"
 
-        from app.agent import RecommendAgent
+        from app.agent import RecommendAgent, SearchPOINavi
 
         request_query = self.format_request_query(plan, step_index)
         result = ""
-
         logger.info(f"start swarm query: {request_query} {plan["steps"][step_index]}")
+
+        # 发送请求到 redis 缓存
+        # sesson id 内存存储的
+        # 数据的结构 需要去和前端的一致
 
         if "recommend_spots" in plan["steps"][step_index]:
             agent = RecommendAgent()
             result = await agent.run(request_query)
-
-            # 发送请求到 redis 缓存
-            # sesson id 内存存储的
-            # 数据的结构 需要去和前端的一致
-
-            logger.info(f"swarm result: {result}")
-
             response, status = self.parser_response(result)
+
         elif "travel_plan" in plan["steps"][step_index]:
             agent = RecommendAgent()
             result = await agent.run(request_query)
             response, status = self.parser_response(result)
+
+        elif "search_poi" in plan["steps"][step_index]:
+            agent = SearchPOINavi()
+            result = await agent.run(request_query)
+            response, status = self.parser_response(result)
+
+        elif "search_route" in plan["steps"][step_index]:
+            agent = SearchPOINavi()
+            result = await agent.run(request_query)
+            response, status = self.parser_response(result)
+
+        logger.info(f"swarm result: {result}")
 
         return response, status
 
@@ -376,11 +385,58 @@ class PlanningTool(BaseTool):
         """Format the request query for a specific step."""
 
         ret = ""
-        for i, step in enumerate(plan["steps"]):
-            if i < step_index:
-                ret += f"Step {i+1} 目的: {step}\n 结果: {plan['step_results'][i]}\n"
-            elif i == step_index:
-                ret += f"Step {i+1} 目的: {step}\n"
+
+        if "recommend_spots" in plan["steps"][step_index] or \
+            "travel_plan" in plan["steps"][step_index]:
+            for i, step in enumerate(plan["steps"]):
+                if i < step_index:
+                    ret += f"Step {i+1} 目的: {step}\n 结果: {plan['step_results'][i]}\n"
+                elif i == step_index:
+                    ret += f"Step {i+1} 目的: {step}\n"
+        else:
+            ret = self.parser_json_str(plan, step_index)
+
+        return ret
+
+    def parser_json_str(self, plan: Dict, step_index: int) -> str:
+        """Parse the JSON string for a specific step."""
+        ret = f"Step {step_index+1} 目的: {plan["steps"][step_index]}\n"
+
+        if step_index == 0:
+            return ret
+
+        if "search_poi" in plan["steps"][step_index]:
+            recommend_str = ""
+
+            for i in range(step_index - 1, -1, -1):
+                if "recommend_spots" in plan["steps"][i]:
+                    recommend_str = plan["step_results"][i]
+                    break
+
+            if recommend_str == "":
+                return ret
+
+            recommend_vec = recommend_str.split('\n')
+            for i in range(len(recommend_vec)):
+                if "执行工具 `recommend_poi` 观测到的结果" in recommend_vec[i]:
+                    ret = recommend_vec[i].split(':')[-1]
+                    return ret
+        elif "search_route" in plan["steps"][step_index]:
+            day_str = ""
+            for i in range(step_index - 1, -1, -1):
+                if "travel_plan" in plan["steps"][i]:
+                    day_str = plan["step_results"][i]
+                    break
+
+            if day_str == "":
+                return ret
+
+            day_vec = day_str.split('\n')
+
+            for i in range(len(day_vec)):
+                if "执行工具 `arrange_days` 观测到的结果" in day_vec[i]:
+                    ret = day_vec[i].split(':')[-1]
+                    return ret
 
         return ret
 
