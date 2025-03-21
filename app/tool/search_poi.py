@@ -1,8 +1,13 @@
+import re
 import aiohttp
 from typing import Dict, Optional
 
 from app.tool.base import BaseTool
 
+'''
+    res_dict = {
+    poi_name: [name, location, play_time],
+'''
 
 class SearchPOI(BaseTool):
     name: str = "search_poi"
@@ -11,38 +16,40 @@ class SearchPOI(BaseTool):
     parameters: dict = {
         "type": "object",
         "properties": {
-            "list": {
+            "query": {
                 "type": "string",
-                "description": "(required) 搜索关键词的列表，往往是某地点的名称、别名或是口语化描述",
+                "description": "(required) 搜索关键词，往往是某地点的名称、别名或是口语化描述",
             },
         },
-        "required": ["keywords"],
+        "required": ['query'],
     }
 
     async def execute(
         self,
-        inputs: dict,
+        query: str,
+        pois: Optional[list] = None,  # [["天安门", "1", ""], ["雍和宫", "2", ""], ["天坛公园", "2", ""]]
     ):
         mykey = '8ef18770408aef7848eac18e09ec0a17'
         url = "https://restapi.amap.com/v5/place/text"
-        res_dict = {}
-        if 'pois' in inputs:
-            pois = inputs['pois']
+        result = []
+        params = {
+            "keywords": query,
+            "key": mykey,
+        }
+        poi_play_time = 1
+        if pois:
             for poi in pois:
-                poi_name, poi_play_time, poi_note = poi[0], poi[1], poi[2]
-                params = {
-                    "keywords": poi_name,
-                    "key": mykey,
-                }
-                try:
-                    async with aiohttp.ClientSession() as session:
-                        async with session.get(url, params=params) as response:
-                            result = await response.json()
-                            result = result['pois']
-                            result = [[cur['name'], cur['location'], poi_play_time, poi_note] for cur in result]
-                            res_dict[poi_name] = result
-                except:
-                    continue
-        return res_dict
+                poi_name, poi_play_time, _ = poi[0], poi[1], poi[2]
+                if poi_name == query:
+                    break
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    results = await response.json()
+                    result = results['pois'][0]
+                    result = [result['name'], result['location'], poi_play_time, result['id'], result['citycode']]
+        except:
+            return []
+        return result
 
 
