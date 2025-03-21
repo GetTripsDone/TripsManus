@@ -1,6 +1,6 @@
 import asyncio
 from typing import Dict
-
+import json
 from openai import OpenAI
 
 from app.tool.base import BaseTool
@@ -26,7 +26,7 @@ class RecommendPOI(BaseTool):
         "required": ["city", "days"],
     }
 
-    async def execute(self, city: str, days: int = 3) -> Dict[str, str]:
+    async def execute(self, city: str, days: int = 3) -> str:
         """
         执行景点推荐，返回推荐结果。
 
@@ -38,13 +38,14 @@ class RecommendPOI(BaseTool):
             Dict[str, str]: 包含推荐结果的字典，包括景点列表和详细建议
         """
         prompt = self._generate_prompt()
-        query = f'规划{city}的{days}天游览行程。'
+        #query = f'规划{city}的{days}天游览行程。'
+        query = f'推荐{city}值得去的景点'
         try:
             recommendation = await self._call_llm(prompt, query)
-            return {"景点推荐结果": recommendation}
+            return json.dumps({"景点推荐结果": recommendation}, ensure_ascii=False)
         except Exception as e:
             print(f"生成景点推荐时发生错误: {e}")
-            return {"error": "生成推荐失败，请稍后重试"}
+            return json.dumps({"error": "生成推荐失败，请稍后重试"}, ensure_ascii=False)
 
     def _generate_prompt(self) -> str:
         """
@@ -67,7 +68,7 @@ class RecommendPOI(BaseTool):
 [["", "", ""], ["", "", ""], ...]
 
 示例：
-输入：规划北京的3天游览行程。
+输入：规划北京游览行程。
 输出：
 [["天安门", "1.5", "不要携带易燃易爆等危险物品"], ["天坛公园", "3", "可以看祈年殿"], ...]
 
@@ -75,7 +76,6 @@ class RecommendPOI(BaseTool):
 1. 请确保输出的是一个list，每个元素是长度为3的list，并且元素的类型是str，不要输出任何其他无关内容
 2. 请确保适合游玩时间的单位是小时，并且最细粒度是0.5小时
 3. 请确保输出的景点名称是真实存在的，并且仅局限于游玩场所，不包含餐厅
-4. 请确保你选择的景区数量符合天数
 
 接下来请根据输入，生成你的结果"""
 
@@ -89,13 +89,14 @@ class RecommendPOI(BaseTool):
         Returns:
             str: 大模型生成的推荐内容
         """
-        client = OpenAI(api_key="sk-f58c13fc9b4f41a5aeeb153fb157d739", base_url="https://api.deepseek.com")
+        client = OpenAI(api_key="cb9729a7-aa90-459f-8315-4ae41a6132f3", base_url="https://ark.cn-beijing.volces.com/api/v3")
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v3-241226",
             messages=[
                 {"role": "system", "content": prompt},
                 {"role": "user", "content": query},
             ],
-            stream=False
+            stream=False,
+            temperature=0.0,
         )
         return response.choices[0].message.content

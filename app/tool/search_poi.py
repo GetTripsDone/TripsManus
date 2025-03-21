@@ -1,6 +1,8 @@
 import re
 import aiohttp
 from typing import Dict, Optional
+import time
+import json
 
 from app.tool.base import BaseTool
 
@@ -29,13 +31,16 @@ class SearchPOI(BaseTool):
         query: str,
         pois: Optional[list] = None,  # [["天安门", "1", ""], ["雍和宫", "2", ""], ["天坛公园", "2", ""]]
     ):
-        mykey = '8ef18770408aef7848eac18e09ec0a17'
+        mykey = '777e65792758b03da95607d112079834'
         url = "https://restapi.amap.com/v5/place/text"
         result = []
         params = {
             "keywords": query,
             "key": mykey,
         }
+
+        time.sleep(1)
+
         poi_play_time = 1
         if pois:
             for poi in pois:

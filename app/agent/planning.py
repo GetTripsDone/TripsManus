@@ -38,7 +38,7 @@ class PlanningAgent(ToolCallAgent):
     step_execution_tracker: Dict[str, Dict] = Field(default_factory=dict)
     current_step_index: Optional[int] = None
 
-    max_steps: int = 2
+    max_steps: int = 5
 
     @model_validator(mode="after")
     def initialize_plan_and_verify_tools(self) -> "PlanningAgent":
@@ -229,7 +229,7 @@ class PlanningAgent(ToolCallAgent):
 async def main():
     # Configure and run the agent
     agent = PlanningAgent(available_tools=ToolCollection(PlanningTool(), Terminate()))
-    result = await agent.run("我想去新西兰玩3天，一个人预算大概7k，帮我规划一下")
+    result = await agent.run("我想去甘肃玩3天，一个人预算大概7k，帮我规划一下")
     print(result)
 
 

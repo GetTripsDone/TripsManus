@@ -3,9 +3,10 @@ from app.agent.base import BaseAgent
 #from app.agent.mcp import MCPAgent
 from app.agent.planning import PlanningAgent
 from app.agent.react import ReActAgent
-from app.agent.swe import SWEAgent
+#from app.agent.swe import SWEAgent
 from app.agent.toolcall import ToolCallAgent
 from app.agent.recommend_agent import RecommendAgent
+from app.agent.search_poi_navi import SearchPOINavi
 
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "ToolCallAgent",
     "MCPAgent",
     "RecommendAgent", 
+    "SearchPOINavi", 
 ]

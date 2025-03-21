@@ -1,6 +1,6 @@
 import asyncio
 from typing import Dict
-
+import json
 from openai import OpenAI
 
 from app.tool.base import BaseTool
@@ -26,7 +26,7 @@ class ArrangeDays(BaseTool):
         "required": ["poi_info", "days"],
     }
 
-    async def execute(self, poi_info: Dict, days: int) -> Dict[str, list]:
+    async def execute(self, poi_info: Dict, days: int) -> str:
         """
         执行每日行程安排，返回安排结果。
 
@@ -38,12 +38,13 @@ class ArrangeDays(BaseTool):
             Dict[str, list]: 包含每日行程安排的字典，key为dayX格式
         """
         prompt = self._generate_prompt()
+
         try:
             arrangement = await self._call_llm(prompt, {"poi_info": poi_info, "days": days})
-            return arrangement
+            return json.dumps({"行程安排结果":arrangement}, ensure_ascii=False)
         except Exception as e:
             print(f"生成行程安排时发生错误: {e}")
-            return {"error": "生成行程安排失败，请稍后重试"}
+            return json.dumps({"error": "生成行程安排失败，请稍后重试"}, ensure_ascii=False)
 
 #     def _generate_prompt(self) -> str:
 #         """
@@ -128,13 +129,14 @@ class ArrangeDays(BaseTool):
         Returns:
             Dict[str, list]: 包含每日行程安排的字典
         """
-        client = OpenAI(api_key="sk-f58c13fc9b4f41a5aeeb153fb157d739", base_url="https://api.deepseek.com")
+        client = OpenAI(api_key="cb9729a7-aa90-459f-8315-4ae41a6132f3", base_url="https://ark.cn-beijing.volces.com/api/v3")
         response = client.chat.completions.create(
-            model="deepseek-chat",
+            model="deepseek-v3-241226",
             messages=[
                 {"role": "system", "content": prompt},
-                {"role": "user", "content": str(data)},
+                {"role": "user", "content": json.dumps(data, ensure_ascii=False)},
             ],
-            stream=False
+            stream=False,
+            temperature=0.0,
         )
         return eval(response.choices[0].message.content)

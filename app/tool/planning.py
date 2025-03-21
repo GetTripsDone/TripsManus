@@ -4,6 +4,7 @@ from typing import Dict, List, Literal, Optional, Tuple
 from app.exceptions import ToolError
 from app.tool.base import BaseTool, ToolResult
 from app.logger import logger
+import json
 
 _PLANNING_TOOL_DESCRIPTION = """规划工具，允许智能体创建和管理解决复杂任务的计划。
 该工具提供创建计划、更新计划步骤和跟踪进度的功能。"""
@@ -334,7 +335,7 @@ class PlanningTool(BaseTool):
 
         request_query = self.format_request_query(plan, step_index)
         result = ""
-        logger.info(f"start swarm query: {request_query} {plan["steps"][step_index]}")
+        logger.info(f"start swarm query: {request_query} \n当前目标: {plan["steps"][step_index]}")
 
         # 发送请求到 redis 缓存
         # sesson id 内存存储的
@@ -419,7 +420,7 @@ class PlanningTool(BaseTool):
             recommend_vec = recommend_str.split('\n')
             for i in range(len(recommend_vec)):
                 if "执行工具 `recommend_poi` 观测到的结果" in recommend_vec[i]:
-                    ret = recommend_vec[i].split(':')[-1]
+                    ret = json.loads(recommend_vec[i].split('观测到的结果:')[1])["景点推荐结果"]
                     return ret
         elif "search_route" in plan["steps"][step_index]:
             day_str = ""
@@ -435,7 +436,9 @@ class PlanningTool(BaseTool):
 
             for i in range(len(day_vec)):
                 if "执行工具 `arrange_days` 观测到的结果" in day_vec[i]:
-                    ret = day_vec[i].split(':')[-1]
+                    ret = json.loads(day_vec[i].split('观测到的结果:')[1])["行程安排结果"]
+                    ret = json.dumps(ret, ensure_ascii=False)
+
                     return ret
 
         return ret

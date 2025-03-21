@@ -25,7 +25,7 @@ class RecommendAgent(ToolCallAgent):
     next_step_prompt: str = NEXT_STEP_PROMPT
     pois: list = []  # 推荐的poi list : [[名字，时间，注意], [], .....]
     days_dict: dict = {}  # 每日安排 {day1: {poi: [poi1, poi2, ...], route: [r1, r2,...]}, day2: {poi: [], route: []}, ...}
-    max_steps: int = 7
+    max_steps: int = 4
 
     # Add general-purpose tools to the tool collection
     available_tools: ToolCollection = Field(
