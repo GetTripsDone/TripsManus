@@ -96,7 +96,6 @@ def get_daily_plan(travel_plan_str: str) -> str:
     print(f"In Daily Plan:\n{daily_plan_str}")
     return daily_plan_str
 
-
 def execute(
         keywords: str,
     ) -> Dict[str, str]:
@@ -115,6 +114,39 @@ def execute(
             return {"error": f"搜索失败: {result.get('info')}"}
     except Exception as e:
         return {"error": f"请求失败: {str(e)}"}
+
+
+def execute_navi(
+    origin: str,
+    destination: str,
+    city1: str,
+    city2: str,
+):
+    url = "https://restapi.amap.com/v5/direction/transit/integrated"
+    mykey = '8ef18770408aef7848eac18e09ec0a17'
+    params = {
+        "origin": origin,
+        "destination": destination,
+        "city1": city1,
+        "city2": city2,
+        "key": mykey,
+        "show_fields": 'cost'
+    }
+
+    result = []
+    try:
+        response = requests.get(url, params=params)
+        time.sleep(0.5)
+        result = response.json()
+        if result.get("status") == "1":
+            duration = result['route']['transits'][0]['cost']['duration']
+            distance = result['route']['transits'][0]['distance']
+            return [duration, distance]
+        else:
+            return []
+    except Exception as e:
+        return []
+
 
 def parse_res(res):
     result = res['pois'][0]
@@ -152,12 +184,75 @@ def extract_search_poi(recommend_scene_str):
         print('='*20)
     return res_list
 
+def search_again(arrange_route_v1):
+    '''
+        1. 搜索daily_plan_str中存在，但是poi_info_list中不存在的景点
+        2、根据daily_plan_str的信息搜索每天的食宿
+    '''
+    arrange_route_v2 = arrange_route_v1.copy()
+    for day, routes in arrange_route_v2.items():
+        for i, route in enumerate(routes):
+            start = route['start']
+            start_location = start['location']
+            if not start_location:
+                res = execute(start['name'])  # name是抽取的名称
+                _, start_location, _, start_city_code = parse_res(res)
+                # 更新起点信息
+                route['start']['location'] = start_location
+                route['start']['city_code'] = start_city_code
+
+            end = route['end']
+            end_location = end['location']
+            if not end_location:
+                res = execute(end['name'])  # name是抽取的名称
+                _, end_location, _, end_city_code = parse_res(res)
+                # 更新终点信息
+                route['end']['location'] = end_location
+                route['end']['city_code'] = end_city_code
+
+            # 更新routes中的route
+            routes[i] = route
+        # 更新arrange_route_v2中的routes
+        arrange_route_v2[day] = routes
+
+    return arrange_route_v2
+
+def search_navi(arrange_route_v2):
+    '''
+        搜索路线
+    '''
+    arrange_route_v3 = arrange_route_v2.copy()
+    for day, routes in arrange_route_v2.items():
+        new_routes = []
+        for i, route in enumerate(routes):
+            start = route['start']
+            end = route['end']
+            start_location = start['location']
+            start_city_code = start['city_code']
+            end_location = end['location']
+            end_city_code = end['city_code']
+            if not start_location or not start_city_code or not end_location or not end_city_code:
+                continue
+            execute_navi_result = execute_navi(start_location, end_location, start_city_code, end_city_code)
+            # 更新路线信息
+            if execute_navi_result:
+                duration, distance = execute_navi_result
+                route['duration'] = duration
+                route['distance'] = distance
+            else:
+                route['duration'] = 0
+                route['distance'] = 0
+            # 更新routes中的route
+            new_routes.append(route)
+        # 更新arrange_route_v3中的routes
+        arrange_route_v3[day] = new_routes
+    return arrange_route_v3
+
 def get_arrange_route(poi_info_list, daily_plan_str):
     '''
         1、搜索daily_plan_str中存在，但是poi_info_list中不存在的景点
         2、根据daily_plan_str的信息搜索每天的食宿
         3、根据以上结果搜索路线
-        poi_info_list: {"name":"八达岭长城", "city": "北京", "description": "保存最完好的明长城精华段", "duration": "5"}
     '''
 
     daily_plan = json.loads(daily_plan_str)
@@ -167,7 +262,31 @@ def get_arrange_route(poi_info_list, daily_plan_str):
         routes = value['routes']  # list
         simplify_plan[day] = routes  # [{start, end, Transportation}, {start, end, Transportation}, ...]
 
-
+    # 使用PROMPT_COMBINE作为系统提示词，并代入实际参数
+    # prompt = PROMPT_COMBINE.format(
+    #     simplify_plan=json.dumps(simplify_plan, ensure_ascii=False),
+    #     poi_info_list=json.dumps(poi_info_list, ensure_ascii=False)
+    # )
+    prompt = PROMPT_COMBINE.replace('{simplify_plan}', json.dumps(simplify_plan, ensure_ascii=False)).replace('{poi_info_list}', json.dumps(poi_info_list, ensure_ascii=False))
+    print('sty play the game')
+    # 调用r1模型生成路线安排结果
+    global r1
+    arrange_route_str = call_llm(prompt, "", r1)
+    print(arrange_route_str)
+    print('='*20)
+    arrange_route_v1 = json.loads(arrange_route_str)
+    print(arrange_route_v1)
+    print('='*20)
+    # 重新搜索没搜到的点
+    arrange_route_v2 = search_again(arrange_route_v1)
+    print(arrange_route_v2)
+    print('='*20)
+    # 搜路返回结果
+    arrange_route_v3 = search_navi(arrange_route_v2)
+    print(arrange_route_v3)
+    print('='*20)
+    arrange_route_str = json.dumps(arrange_route_v3, ensure_ascii=False)
+    return arrange_route_str
 
 def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
@@ -197,5 +316,221 @@ if __name__ == "__main__":
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 
-    main(city, start_time, end_time)
+    # main(city, start_time, end_time)
+    poi_info_list = [
+    {
+        'name': '莫高窟',
+        'poi_name': '莫高窟',
+        'location': '敦煌市',
+        'id': '62010001',
+        'city_code': '0937',
+        'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑',
+        'duration': '3.5'
+    },
+    {
+        'name': '鸣沙山月牙泉',
+        'poi_name': '鸣沙山月牙泉',
+        'location': '敦煌市',
+        'id': '62010002',
+        'city_code': '0937',
+        'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙',
+        'duration': '2.5'
+    },
+    {
+        'name': '嘉峪关关城',
+        'poi_name': '嘉峪关关城',
+        'location': '嘉峪关市',
+        'id': '62020001',
+        'city_code': '0937',
+        'description': '明代万里长城的西端起点，被誉为“天下第一雄关”',
+        'duration': '2.5'
+    },
+    {
+        'name': '张掖丹霞国家地质公园',
+        'poi_name': '张掖丹霞国家地质公园',
+        'location': '张掖市临泽县和肃南县',
+        'id': '62070001',
+        'city_code': '0936',
+        'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂',
+        'duration': '3.5'
+    },
+    {
+        'name': '马蹄寺',
+        'poi_name': '马蹄寺',
+        'location': '张掖市肃南裕固族自治县',
+        'id': '62070002',
+        'city_code': '0936',
+        'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区',
+        'duration': '2.5'
+    }
+]
+
+    daily_plan_str = {
+    "day1": {
+        "title": "敦煌文化+沙漠奇观",
+        "topic": "佛教艺术与沙漠体验",
+        "lodging": "敦煌市区",
+        "restaurant": "敦煌市区（早/午/晚）",
+        "travel_details": [
+            {
+                "time": "07:00-08:00",
+                "description": "早餐（敦煌市区，推荐牛肉面、杏皮水）"
+            },
+            {
+                "time": "08:30-12:30",
+                "description": "莫高窟（历史文化）<br>参观洞窟壁画，需提前预约门票。"
+            },
+            {
+                "time": "12:30-13:30",
+                "description": "午餐（景区附近简餐或返回市区品尝驴肉黄面）"
+            },
+            {
+                "time": "14:00-17:30",
+                "description": "鸣沙山月牙泉（自然风光）<br>骑骆驼、滑沙，傍晚光线适合摄影。"
+            },
+            {
+                "time": "18:00-19:00",
+                "description": "晚餐（市区内，尝试敦煌酿皮、烤羊排）"
+            }
+        ],
+        "routes": [
+            {
+                "start": "敦煌市区早餐店，(推荐牛肉面、杏皮水）",
+                "end": "莫高窟",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "莫高窟",
+                "end": "午餐店（莫高窟景区附近简餐)",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "午餐店（莫高窟景区附近简餐)",
+                "end": "鸣沙山月牙泉",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "鸣沙山月牙泉",
+                "end": "晚餐店（敦煌市区内 尝试敦煌酿皮、烤羊排）",
+                "Transportation": "汽车"
+            }
+        ]
+    },
+    "day2": {
+        "title": "雄关漫道+丹霞日落",
+        "topic": "长城文化与地质奇观",
+        "lodging": "张掖市区",
+        "restaurant": "嘉峪关市区（午）、张掖市区（晚）",
+        "travel_details": [
+            {
+                "time": "07:00-07:30",
+                "description": "早餐后退房，前往敦煌高铁站"
+            },
+            {
+                "time": "08:00-12:00",
+                "description": "高铁前往嘉峪关（约4小时）"
+            },
+            {
+                "time": "12:00-13:00",
+                "description": "午餐（嘉峪关市区，推荐羊肉垫卷子）"
+            },
+            {
+                "time": "13:30-16:00",
+                "description": "嘉峪关关城（历史文化）<br>登城楼俯瞰戈壁，感受“天下第一雄关”气势。"
+            },
+            {
+                "time": "16:30-18:30",
+                "description": "高铁前往张掖（约2小时）"
+            },
+            {
+                "time": "19:00-20:00",
+                "description": "晚餐（张掖市区，推荐搓鱼面、炒拨拉）"
+            }
+        ],
+        "routes": [
+            {
+                "start": "敦煌市区早餐店",
+                "end": "敦煌高铁站",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "敦煌高铁站",
+                "end": "嘉峪关",
+                "Transportation": "高铁"
+            },
+            {
+                "start": "午餐店（嘉峪关市区，推荐羊肉垫卷子）",
+                "end": "嘉峪关关城",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "嘉峪关关城",
+                "end": "嘉峪关高铁站",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "嘉峪关高铁站",
+                "end": "张掖",
+                "Transportation": "高铁"
+            },
+            {
+                "start": "张掖高铁站",
+                "end": "晚餐店（张掖市区，推荐搓鱼面、炒拨拉）",
+                "Transportation": "汽车"
+            }
+        ]
+    },
+    "day3": {
+        "title": "丹霞地貌+石窟探秘",
+        "topic": "自然奇观与民族风情",
+        "lodging": "张掖市区",
+        "restaurant": "丹霞景区附近（午）、张掖市区（晚）",
+        "travel_details": [
+            {
+                "time": "07:00-07:30",
+                "description": "早餐（张掖市区）"
+            },
+            {
+                "time": "08:00-12:00",
+                "description": "张掖丹霞国家地质公园（自然风光）<br>清晨色彩最艳丽，适合航拍。"
+            },
+            {
+                "time": "12:30-13:30",
+                "description": "午餐（景区附近农家菜或返回市区）"
+            },
+            {
+                "time": "14:00-17:00",
+                "description": "马蹄寺（民俗风情）<br>探访悬崖石窟，体验裕固族文化。"
+            },
+            {
+                "time": "17:30-18:30",
+                "description": "返回张掖市区，晚餐（推荐手抓羊肉、灰豆汤）"
+            }
+        ],
+        "routes": [
+            {
+                "start": "张掖市区早餐店",
+                "end": "张掖丹霞国家地质公园",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "张掖丹霞国家地质公园",
+                "end": "午餐（张掖市区寻找）",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "午餐（张掖市区寻找）",
+                "end": "马蹄寺",
+                "Transportation": "汽车"
+            },
+            {
+                "start": "马蹄寺",
+                "end": "张掖市区，晚餐（推荐手抓羊肉、灰豆汤）",
+                "Transportation": "汽车"
+            }
+        ]
+    }
+}
+    arrange_route_str = get_arrange_route(poi_info_list, json.dumps(daily_plan_str, ensure_ascii=False))
+    print(arrange_route_str)
 

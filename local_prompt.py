@@ -66,7 +66,7 @@ mock_input_text = """# 自然风光
 
 2. 嘉峪关关城
    - 所在地点：嘉峪关市
-   - 景点介绍：明代万里长城的西端起点，被誉为“天下第一雄关”。
+   - 景点介绍：明代万里长城的西端起点，被判为“天下第一雄关”。
    - 预估游玩时长：2-3小时
 
 3. 拉卜楞寺
@@ -112,8 +112,133 @@ PROMPT_COMBINE = """任务背景：
 请你把输入的每日行程安排simplify_plan和景点信息poi_info_list进行整合，生成一个完整的行程安排，格式为JSON。
 
 要求：
-1. 你需要把poi_info_list中每个景点的信息坐标信息location整合到simplify_plan中，确保每个景点都有对应的详细信息。
-2. simplify_plan中key为每一天，value为当天所有的路线list，每个元素是每一段路线，包含start、end、Transportation
-3. 你生成的json格式应为{"day1": [{"start": "xxx", "end": "xxx", "Transportation": "xxx", "location": "xxx", }, {"start": "xxx", "end": "xxx", "Transportation": "xxx", "location": "xxx",}], "day2": [{"start": "xxx", "end": "xxx", "Transportation": "xxx", "location": "xxx", }, {"start": "xxx", "end": "xxx", "Transportation": "xxx", "location": "xxx",}], ...}
+1. 你需要把poi_info_list中每个景点的信息坐标信息location和整合到simplify_plan每一天的路线信息中，确保每个每条路线的景点都有对应的详细信息。
+2. simplify_plan中key为每一天，value为当天所有的路线list，每个元素是每一段路线，包含start（起点）、end（终点）、Transportation（交通方式）
+3. 你生成的json格式应为{"day1": [{"start": {"location": "xxx", "city_code": "xxx"}, "end": {"location": "xxx", "city_code": "xxx"}, "Transportation": "xxx"}, {"start": {"location": "xxx", "city_code": "xxx"}, "end": {"location": "xxx", "city_code": "xxx"}, "Transportation": "xxx"}, ...],  ...}
+4. 其中，location是poi_info_list中景点的坐标信息，你需要在simplify_plan中找到对应的点名称，然后在poi_info_list中找到对应的坐标信息，然后整合到simplify_plan中。如果发现poi_info_list不存在simplify_plan中的景点名称，location为空即可，city_code也同理
+5. 如果你发现simplify_plan的点是餐饮类的点，请你尽量将其名称描述为"A附近的B"或"A的B"，比如"故宫附近的烤鸭", "敦煌市区的杏皮水"，其中A是地点，B是类别/特色菜
 
+注意：
+1. 两条相邻的路线中，上一条的end就是下一条的start，要保持一致！
+2. 你的输出必须是合法的JSON格式，不要有任何其他无关元素
+
+输出格式示例：
+{
+    "day1": [
+            {
+                "start": {
+                    "name": "敦煌市区的牛肉面、杏皮水",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "莫高窟",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            },
+            {
+                "start": {
+                    "name": "莫高窟",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "莫高窟景区的简餐",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            },
+            {
+                "start": {
+                    "name": "莫高窟景区的简餐",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "鸣沙山月牙泉",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            },
+            {
+                "start": {
+                    "name": "鸣沙山月牙泉",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "敦煌市区的敦煌酿皮、烤羊排",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            }
+        ],
+    "day2": [
+            {
+                "start": {
+                    "name": "敦煌市区的早餐店",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "敦煌高铁站",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            },
+            {
+                "start": {
+                    "name": "敦煌高铁站",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "嘉峪关",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "高铁"
+            },
+            {
+                "start": {
+                    "name": "嘉峪关市区的羊肉垫卷子",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "嘉峪关关城",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            },
+            {
+                "start": {
+                    "name": "嘉峪关关城",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "end": {
+                    "name": "嘉峪关高铁站",
+                    "location": "xxx",
+                    "city_code": "xxx"
+                },
+                "Transportation": "汽车"
+            }
+            ]
+}
+
+接下来请你根据输入文本，按照上述要求和示例case，输出符合要求的JSON。
+
+输入：
+simplify_plan = {simplify_plan}
+poi_info_list = {poi_info_list}
+
+输出：
 """
