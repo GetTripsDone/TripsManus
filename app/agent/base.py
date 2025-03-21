@@ -128,6 +128,7 @@ class BaseAgent(BaseModel, ABC):
         if self.state != AgentState.IDLE:
             raise RuntimeError(f"Cannot run agent from state: {self.state}")
 
+        self.request = request
         if request:
             self.update_memory("user", request)
 
