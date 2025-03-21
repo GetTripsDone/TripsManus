@@ -10,6 +10,9 @@ from app.tool.search_poi import SearchPOI
 from app.tool.search_route import SearchRoute
 from app.schema import ToolCall
 from app.logger import logger
+from app.sandbox.client import SANDBOX_CLIENT
+from app.schema import ROLE_TYPE, AgentState, Memory, Message
+from typing import List, Optional
 
 
 class SearchPOINavi(ToolCallAgent):
@@ -58,9 +61,9 @@ class SearchPOINavi(ToolCallAgent):
             # Execute the tool
             logger.info(f"🔧 Activating tool: '{name}'...")
             result = await self.available_tools.execute(name=name, tool_input=args)
-            if name == 'search_poi':
+            if name == 'search_poi' and result:
                 self.pois.append(result)
-            if name == 'search_route':
+            if name == 'search_route' and result:
                 self.days.append(result)  # [duration, distance, day, r]
             # Handle special tools
             await self._handle_special_tool(name=name, result=result)  # 特殊工具，terminate
@@ -83,6 +86,9 @@ class SearchPOINavi(ToolCallAgent):
             suffix = ''
             if name == '终止工具':
                 suffix = f"\n\n已搜索到的地点、坐标、游玩时间、id、citycode:{pois_res}\n\n已搜索到的days安排:{days_res}\n\n"
+                self.pois = []
+                self.days = []
+                return suffix
             observation = (
                 f"执行工具 `{name}` 观测到的结果:\n{str(result)}" + suffix
                 if result
@@ -100,3 +106,44 @@ class SearchPOINavi(ToolCallAgent):
             error_msg = f"⚠️ Tool '{name}' encountered a problem: {str(e)}"
             logger.exception(error_msg)
             return f"Error: {error_msg}"
+
+    async def run(self, request: Optional[str] = None) -> str:
+        """Execute the agent's main loop asynchronously.
+
+        Args:
+            request: Optional initial user request to process.
+
+        Returns:
+            A string summarizing the execution results.
+
+        Raises:
+            RuntimeError: If the agent is not in IDLE state at start.
+        """
+        if self.state != AgentState.IDLE:
+            raise RuntimeError(f"Cannot run agent from state: {self.state}")
+
+        self.request = request
+        if request:
+            self.update_memory("user", request)
+
+        results: List[str] = []
+        async with self.state_context(AgentState.RUNNING):
+            while (
+                self.current_step < self.max_steps and self.state != AgentState.FINISHED
+            ):
+                self.current_step += 1
+                logger.info(f"Executing step {self.current_step}/{self.max_steps}")
+                step_result = await self.step()
+
+                # Check for stuck state
+                if self.is_stuck():
+                    self.handle_stuck_state()
+
+                results.append(f"Step {self.current_step}: {step_result}")
+
+            if self.current_step >= self.max_steps:
+                self.current_step = 0
+                self.state = AgentState.IDLE
+                results.append(f"Terminated: Reached max steps ({self.max_steps})")
+        await SANDBOX_CLIENT.cleanup()
+        return results[-1] if results else "No steps executed"
