@@ -13,7 +13,10 @@ from app.logger import logger
 from app.sandbox.client import SANDBOX_CLIENT
 from app.schema import ROLE_TYPE, AgentState, Memory, Message
 from typing import List, Optional
+<<<<<<< HEAD
 
+=======
+>>>>>>> 4c54dc39c8a23b9cc4fe393dcdfaae0a797dba36
 
 class SearchPOINavi(ToolCallAgent):
     """
@@ -83,12 +86,14 @@ class SearchPOINavi(ToolCallAgent):
 
             pois_res = json.dumps(self.pois, ensure_ascii=False)
             days_res = json.dumps(self.days, ensure_ascii=False)
+
             suffix = ''
             if name == '终止工具':
-                suffix = f"\n\n已搜索到的地点、坐标、游玩时间、id、citycode:{pois_res}\n\n已搜索到的days安排:{days_res}\n\n"
+                suffix = f"搜索POI结果:{pois_res}\n路线结果:{days_res}\n执行工具 `{name}` 观测到的结果:{result}"
                 self.pois = []
                 self.days = []
                 return suffix
+
             observation = (
                 f"执行工具 `{name}` 观测到的结果:\n{str(result)}" + suffix
                 if result
@@ -146,4 +151,8 @@ class SearchPOINavi(ToolCallAgent):
                 self.state = AgentState.IDLE
                 results.append(f"Terminated: Reached max steps ({self.max_steps})")
         await SANDBOX_CLIENT.cleanup()
+<<<<<<< HEAD
         return results[-1] if results else "No steps executed"
+=======
+        return results[-1] if results and len(results) > 0 else "No steps executed"
+>>>>>>> 4c54dc39c8a23b9cc4fe393dcdfaae0a797dba36

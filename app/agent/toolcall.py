@@ -234,16 +234,16 @@ class ToolCallAgent(ReActAgent):
 
             # Format result for display (standard case)
             observation = (
-                f"执行工具 `{name}` 观测到的结果:{str(result)}"
+                f"执行工具 `{name}` 观测到的结果:{result}"
                 if result
                 else f"执行 `{name}` 结束，无返回结果"
             )
 
             return observation
-        except json.JSONDecodeError:
-            error_msg = f"Error parsing arguments for {name}: Invalid JSON format"
+        except json.JSONDecodeError as e:
+            error_msg = f"Error parsing arguments for {name}: Invalid JSON format{e}"
             logger.error(
-                f"📝 Oops! The arguments for '{name}' don't make sense - invalid JSON, arguments:{command.function.arguments}"
+                f"📝 Oops! The arguments for '{name}' don't make sense - invalid JSON, arguments:{command.function.arguments} {e}"
             )
             return f"Error: {error_msg}"
         except Exception as e:

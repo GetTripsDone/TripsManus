@@ -1,6 +1,7 @@
 import aiohttp
 from typing import Dict, Optional
-
+import time
+import json
 from app.tool.base import BaseTool
 
 
@@ -61,6 +62,9 @@ class SearchRoute(BaseTool):
             "key": mykey,
             "show_fields": 'cost'
         }
+
+        time.sleep(1)
+
         # r1: [["天安门", "116.397455,39.909187", "1", "B000A60DA1", "010"], ["雍和宫", "116.417296,39.947239", "2", "B000A7BGMG", "010"]]
         result = []
         day = 'day1'

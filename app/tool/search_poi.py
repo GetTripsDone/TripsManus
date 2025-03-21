@@ -1,6 +1,8 @@
 import re
 import aiohttp
 from typing import Dict, Optional
+import time
+import json
 
 from app.tool.base import BaseTool
 
@@ -36,6 +38,9 @@ class SearchPOI(BaseTool):
             "keywords": query,
             "key": mykey,
         }
+
+        time.sleep(1)
+
         poi_play_time = 1
         if pois:
             for poi in pois:
