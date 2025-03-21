@@ -24,7 +24,6 @@ def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
 
                 stream=False,
                 temperature=1.0,
-                max_tokens=16384,
         )
     else:
         response = client.chat.completions.create(
@@ -36,7 +35,6 @@ def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
 
                 stream=False,
                 temperature=1.0,
-                max_tokens=16384,
         )
 
     #print(f"llm response is {response}")
@@ -89,9 +87,13 @@ def get_daily_plan(travel_plan_str: str) -> str:
 
     daily_plan_str = call_llm(Daily_Plan_SysPrompt, prompt, v3)
 
-    print(f"In Daily Plan:\n{daily_plan_str}")
-    return daily_plan_str
+    ret = daily_plan_str
+    if "```json" in daily_plan_str and "```" in daily_plan_str:
+        json_str = daily_plan_str.split("```json")[1].split("```")[0]
+        ret = json_str
 
+    print(f"In Daily Plan:\n{ret}")
+    return ret
 
 def execute(
         keywords: str,
@@ -133,7 +135,7 @@ def extract_search_poi(recommend_scene_str):
         poi_name, poi_location, poi_id, city_code = parse_res(res)  # poi_name是检索到的真实名称
         if poi_name == "":
             continue
-        time.sleep(0.5)
+        time.sleep(1)
         poi_info_dict = {
             'name': name,
             'poi_name': poi_name,
@@ -169,27 +171,26 @@ def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     recommend_scene_str = get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    poi_info_list = extract_search_poi(recommend_scene_str)
+    # poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1 获取对应 每一天的行程安排，带时间和住宿
     travel_plan_str = get_travel_plan(recommend_scene_str, start_time, end_time)
     # 3.
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
     daily_plan_str = get_daily_plan(travel_plan_str)
 
-    # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
-    arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
-
     # 并行分支 4.1 将每天的行程 返回给端上
     #format_to_show_json = format_show(daily_plan_str)
-    # 并行分支 4.2 请求高德路线接口，获取路线结果，返回给端上呈现
-    #route_result = get_route_result(daily_plan_str)
+
+    # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
+    # arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
+
     # 5. 路线结果格式化成返回给端上的格式
     #format_route_result = format_route(route_result)
 
     return
 
 if __name__ == "__main__":
-    city = "北京"
+    city = "上海"
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 
