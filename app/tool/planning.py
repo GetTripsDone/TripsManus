@@ -339,7 +339,7 @@ class PlanningTool(BaseTool):
 
         if "recommend_spots" in plan["steps"][step_index]:
             agent = RecommendAgent()
-            result = await agent.run(request_query)
+            result = await agent.run(request_query)  # 输入输出都要适配
 
             # 发送请求到 redis 缓存
             # sesson id 内存存储的
