@@ -212,10 +212,9 @@ async def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, e
 
     # ** 注意 **
     1.  输出采用markdown格式，每一天的行程安排都用分割线进行分割，第一天的输出前面也要加分割线
-    2.  游玩的景区，需要加入  [PX_START] 景点名称 [PX_END]，X是景点编号
-    3.  早/中/晚吃饭的地方，需要加入 [Restaurant_start] 餐馆描述 [Restaurant_End]
-    4. 晚上住宿的地方，需要加入 [Hotel_Start] 酒店 [Hotel_End]
-
+    2.  游玩的景区，需要加入 前后缀 [PX_START] 景点名称 [PX_END]，X是景点编号
+    3.  早/中/晚吃饭的地方，需要加入 前后缀 [RESTAURANT_START] 餐馆描述 [RESTAURANT_END]
+    4.  晚上住宿的地方，需要加入 前后缀 [HOTEL_START] 酒店 [HOTEL_END]
     """ + recommend_scene_str
 
     sections = []
