@@ -74,14 +74,14 @@ def get_recommend(city: str):
 
     return recommend_scene_str
 
-def get_travel_plan(recommend_scene_str: str, start_time:str, end_time:str) -> str:
+def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, end_time:str) -> str:
     global r1
     prompt = f"""
-    根据如下提供的景点信息，规划一个从{start_time}到{end_time}时间的行程。
+    用户已经在{city}，根据如下提供的景点信息，规划一个从{start_time}到{end_time}时间的行程。
     包含餐饮和住宿，餐饮和住宿不用给出具体点，给出在什么位置进行餐饮和住宿即可。
-    包含详细的时间安排。\n""" + recommend_scene_str
+    包含详细的时间安排。你需要考虑一下各个地点之间的路线、距离和时间\n""" + recommend_scene_str
 
-    travel_plan_str = call_llm("", prompt, r1)
+    travel_plan_str = call_llm("", prompt, v3)
 
     print(f"In Travel Plan:\n{travel_plan_str}")
 
@@ -329,10 +329,9 @@ def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     recommend_scene_str = get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    poi_info_list = extract_search_poi(recommend_scene_str)  # 先用mock数据
-    # print('poi_list:\n', poi_info_list)
-    # 并行分支 2.2 使用景区请求 R1 获取对应 每一天的行程安排，带时间和住宿
-    # travel_plan_str = get_travel_plan(recommend_scene_str, start_time, end_time)
+    # poi_info_list = extract_search_poi(recommend_scene_str)
+    # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
+    travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
     # 3.
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
     # daily_plan_str = get_daily_plan(travel_plan_str)
@@ -349,7 +348,7 @@ def main(city: str, start_time: str, end_time: str):
     return
 
 if __name__ == "__main__":
-    city = "上海"
+    city = "黄山"
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 

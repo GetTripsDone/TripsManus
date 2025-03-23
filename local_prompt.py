@@ -120,23 +120,23 @@ Daily_Plan_SysPrompt = """
         ],
         "routes": [
             {
-                "start": "敦煌市区早餐店，(推荐牛肉面、杏皮水）",
+                "start": "敦煌市区内能吃到牛肉面杏皮水的早餐店",
                 "end": "莫高窟",
                 "Transportation": "汽车"
             },
             {
                 "start": "莫高窟",
-                "end": "午餐店（莫高窟景区附近简餐)",
+                "end": "莫高窟景区附近的简餐",
                 "Transportation": "汽车"
             },
             {
-                "start": "午餐店（莫高窟景区附近简餐)",
+                "start": "莫高窟景区附近的简餐",
                 "end": "鸣沙山月牙泉",
                 "Transportation": "汽车"
             },
             {
                 "start": "鸣沙山月牙泉",
-                "end": "晚餐店（敦煌市区内 尝试敦煌酿皮、烤羊排）",
+                "end": "敦煌市区内能尝试敦煌酿皮烤羊排的晚餐店",
                 "Transportation": "汽车"
             }
         ]
@@ -174,7 +174,7 @@ Daily_Plan_SysPrompt = """
         ],
         "routes": [
             {
-                "start": "敦煌市区早餐店",
+                "start": "敦煌市区的早餐店",
                 "end": "敦煌高铁站",
                 "Transportation": "汽车"
             },
@@ -184,7 +184,7 @@ Daily_Plan_SysPrompt = """
                 "Transportation": "高铁"
             },
             {
-                "start": "午餐店（嘉峪关市区，推荐羊肉垫卷子）",
+                "start": "嘉峪关市区里有羊肉垫卷子的店",
                 "end": "嘉峪关关城",
                 "Transportation": "汽车"
             },
@@ -200,7 +200,7 @@ Daily_Plan_SysPrompt = """
             },
             {
                 "start": "张掖高铁站",
-                "end": "晚餐店（张掖市区，推荐搓鱼面、炒拨拉）",
+                "end": "张掖市区里有特色搓鱼面炒拨拉的店",
                 "Transportation": "汽车"
             }
         ]
@@ -234,23 +234,23 @@ Daily_Plan_SysPrompt = """
         ],
         "routes": [
             {
-                "start": "张掖市区早餐店",
+                "start": "张掖市区适合吃早餐的地方",
                 "end": "张掖丹霞国家地质公园",
                 "Transportation": "汽车"
             },
             {
                 "start": "张掖丹霞国家地质公园",
-                "end": "午餐（张掖市区寻找）",
+                "end": "张掖市区好吃的午餐店",
                 "Transportation": "汽车"
             },
             {
-                "start": "午餐（张掖市区寻找）",
+                "start": "张掖市区好吃的午餐店",
                 "end": "马蹄寺",
                 "Transportation": "汽车"
             },
             {
                 "start": "马蹄寺",
-                "end": "张掖市区，晚餐（推荐手抓羊肉、灰豆汤）",
+                "end": "张掖市区内能吃到特色手抓羊肉灰豆汤的店",
                 "Transportation": "汽车"
             }
         ]
