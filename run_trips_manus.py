@@ -329,21 +329,23 @@ def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     recommend_scene_str = get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    # poi_info_list = extract_search_poi(recommend_scene_str)
+    poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
     travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
     # 3.
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
-    # daily_plan_str = get_daily_plan(travel_plan_str)
+    daily_plan_str = get_daily_plan(travel_plan_str)
 
     # 并行分支 4.1 将每天的行程 返回给端上
-    #format_to_show_json = format_show(daily_plan_str)
+    arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
+
+    # format_to_show_json = format_show(daily_plan_str)
 
     # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
     # arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
 
     # 5. 路线结果格式化成返回给端上的格式
-    #format_route_result = format_route(route_result)
+    # format_route_result = format_route(route_result)
 
     return
 
@@ -352,174 +354,174 @@ if __name__ == "__main__":
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 
-    # main(city, start_time, end_time)
-    poi_info_list = [{'name': '张掖丹霞国家地质公园', 'poi_name': '张掖世界地质公园', 'location': '100.042200,38.975330', 'id': 'B03A813VVF', 'city_code': '0936', 'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂。', 'duration': '3.5'}, {'name': '鸣沙山月牙泉', 'poi_name': '鸣沙山月牙泉', 'location': '94.680396,40.088833', 'id': 'B03A9000ZN', 'city_code': '0937', 'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙。', 'duration': '2.5'}, {'name': '麦积山石窟', 'poi_name': '麦积山石窟', 'location': '106.008075,34.350764', 'id': 'B03AA005RW', 'city_code': '0938', 'description': '以精美的泥塑艺术闻名，是中国四大石窟之一。', 'duration': '2.5'}, {'name': '莫高窟', 'poi_name': '莫高窟景区', 'location': '94.809374,40.042511', 'id': 'B03A900102', 'city_code': '0937', 'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑。', 'duration': '3.5'}, {'name': '嘉峪关关城', 'poi_name': '嘉峪关文物景区', 'location': '98.228494,39.801021', 'id': 'B079100049', 'city_code': '1937', 'description': '明代万里长城的西端起点，被判为“天下第一雄关”。', 'duration': '2.5'}, {'name': '拉卜楞寺', 'poi_name': '拉卜楞寺', 'location': '102.509660,35.192953', 'id': 'B03AD001JE', 'city_code': '0941', 'description': '藏传佛教格鲁派六大寺院之一，拥有丰富的宗教文化和建筑艺术。', 'duration': '2.5'}, {'name': '郎木寺', 'poi_name': '郎木寺院', 'location': '102.632929,34.092557', 'id': 'B03AD009J5', 'city_code': '0941', 'description': '藏传佛教寺院，周围风景优美，是体验藏族文化的好去处。', 'duration': '2.5'}, {'name': '夏河桑科草原', 'poi_name': '桑科草原', 'location': '102.434001,35.110502', 'id': 'B0HR2ZSWZL', 'city_code': '0941', 'description': '广阔的草原风光，可以体验骑马和藏族民俗活动。', 'duration': '3.5'}, {'name': '临夏八坊十三巷', 'poi_name': '八坊十三巷', 'location': '103.210271,35.591251', 'id': 'B0FFIK006P', 'city_code': '0930', 'description': '回族文化街区，充满了浓郁的民族风情和历史文化。', 'duration': '2.5'}, {'name': '黄河石林', 'poi_name': '黄河石林国家地质公园', 'location': '104.314490,36.892922', 'id': 'B03AF002D7', 'city_code': '0943', 'description': '以奇特的石林地貌和黄河风光相结合，景色壮丽。', 'duration': '3.5'}, {'name': '崆峒山', 'poi_name': '崆峒山风景名胜区', 'location': '106.530016,35.547444', 'id': 'B03A500C84', 'city_code': '0933', 'description': '道教名山，风景秀丽，文化底蕴深厚。', 'duration': '3.5'}, {'name': '马蹄寺', 'poi_name': '马蹄生态文化旅游区', 'location': '100.416624,38.484258', 'id': 'B03A8005PU', 'city_code': '0936', 'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区。', 'duration': '2.5'}]
+    main(city, start_time, end_time)
+#     poi_info_list = [{'name': '张掖丹霞国家地质公园', 'poi_name': '张掖世界地质公园', 'location': '100.042200,38.975330', 'id': 'B03A813VVF', 'city_code': '0936', 'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂。', 'duration': '3.5'}, {'name': '鸣沙山月牙泉', 'poi_name': '鸣沙山月牙泉', 'location': '94.680396,40.088833', 'id': 'B03A9000ZN', 'city_code': '0937', 'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙。', 'duration': '2.5'}, {'name': '麦积山石窟', 'poi_name': '麦积山石窟', 'location': '106.008075,34.350764', 'id': 'B03AA005RW', 'city_code': '0938', 'description': '以精美的泥塑艺术闻名，是中国四大石窟之一。', 'duration': '2.5'}, {'name': '莫高窟', 'poi_name': '莫高窟景区', 'location': '94.809374,40.042511', 'id': 'B03A900102', 'city_code': '0937', 'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑。', 'duration': '3.5'}, {'name': '嘉峪关关城', 'poi_name': '嘉峪关文物景区', 'location': '98.228494,39.801021', 'id': 'B079100049', 'city_code': '1937', 'description': '明代万里长城的西端起点，被判为“天下第一雄关”。', 'duration': '2.5'}, {'name': '拉卜楞寺', 'poi_name': '拉卜楞寺', 'location': '102.509660,35.192953', 'id': 'B03AD001JE', 'city_code': '0941', 'description': '藏传佛教格鲁派六大寺院之一，拥有丰富的宗教文化和建筑艺术。', 'duration': '2.5'}, {'name': '郎木寺', 'poi_name': '郎木寺院', 'location': '102.632929,34.092557', 'id': 'B03AD009J5', 'city_code': '0941', 'description': '藏传佛教寺院，周围风景优美，是体验藏族文化的好去处。', 'duration': '2.5'}, {'name': '夏河桑科草原', 'poi_name': '桑科草原', 'location': '102.434001,35.110502', 'id': 'B0HR2ZSWZL', 'city_code': '0941', 'description': '广阔的草原风光，可以体验骑马和藏族民俗活动。', 'duration': '3.5'}, {'name': '临夏八坊十三巷', 'poi_name': '八坊十三巷', 'location': '103.210271,35.591251', 'id': 'B0FFIK006P', 'city_code': '0930', 'description': '回族文化街区，充满了浓郁的民族风情和历史文化。', 'duration': '2.5'}, {'name': '黄河石林', 'poi_name': '黄河石林国家地质公园', 'location': '104.314490,36.892922', 'id': 'B03AF002D7', 'city_code': '0943', 'description': '以奇特的石林地貌和黄河风光相结合，景色壮丽。', 'duration': '3.5'}, {'name': '崆峒山', 'poi_name': '崆峒山风景名胜区', 'location': '106.530016,35.547444', 'id': 'B03A500C84', 'city_code': '0933', 'description': '道教名山，风景秀丽，文化底蕴深厚。', 'duration': '3.5'}, {'name': '马蹄寺', 'poi_name': '马蹄生态文化旅游区', 'location': '100.416624,38.484258', 'id': 'B03A8005PU', 'city_code': '0936', 'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区。', 'duration': '2.5'}]
 
-    daily_plan_str = {
-    "day1": {
-        "title": "敦煌文化+沙漠奇观",
-        "topic": "佛教艺术与沙漠体验",
-        "lodging": "敦煌市区",
-        "restaurant": "敦煌市区（早/午/晚）",
-        "travel_details": [
-            {
-                "time": "07:00-08:00",
-                "description": "早餐（敦煌市区，推荐牛肉面、杏皮水）"
-            },
-            {
-                "time": "08:30-12:30",
-                "description": "莫高窟（历史文化）<br>参观洞窟壁画，需提前预约门票。"
-            },
-            {
-                "time": "12:30-13:30",
-                "description": "午餐（景区附近简餐或返回市区品尝驴肉黄面）"
-            },
-            {
-                "time": "14:00-17:30",
-                "description": "鸣沙山月牙泉（自然风光）<br>骑骆驼、滑沙，傍晚光线适合摄影。"
-            },
-            {
-                "time": "18:00-19:00",
-                "description": "晚餐（市区内，尝试敦煌酿皮、烤羊排）"
-            }
-        ],
-        "routes": [
-            {
-                "start": "敦煌市区早餐店，(推荐牛肉面、杏皮水）",
-                "end": "莫高窟",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "莫高窟",
-                "end": "午餐店（莫高窟景区附近简餐)",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "午餐店（莫高窟景区附近简餐)",
-                "end": "鸣沙山月牙泉",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "鸣沙山月牙泉",
-                "end": "晚餐店（敦煌市区内 尝试敦煌酿皮、烤羊排）",
-                "Transportation": "汽车"
-            }
-        ]
-    },
-    "day2": {
-        "title": "雄关漫道+丹霞日落",
-        "topic": "长城文化与地质奇观",
-        "lodging": "张掖市区",
-        "restaurant": "嘉峪关市区（午）、张掖市区（晚）",
-        "travel_details": [
-            {
-                "time": "07:00-07:30",
-                "description": "早餐后退房，前往敦煌高铁站"
-            },
-            {
-                "time": "08:00-12:00",
-                "description": "高铁前往嘉峪关（约4小时）"
-            },
-            {
-                "time": "12:00-13:00",
-                "description": "午餐（嘉峪关市区，推荐羊肉垫卷子）"
-            },
-            {
-                "time": "13:30-16:00",
-                "description": "嘉峪关关城（历史文化）<br>登城楼俯瞰戈壁，感受“天下第一雄关”气势。"
-            },
-            {
-                "time": "16:30-18:30",
-                "description": "高铁前往张掖（约2小时）"
-            },
-            {
-                "time": "19:00-20:00",
-                "description": "晚餐（张掖市区，推荐搓鱼面、炒拨拉）"
-            }
-        ],
-        "routes": [
-            {
-                "start": "敦煌市区早餐店",
-                "end": "敦煌高铁站",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "敦煌高铁站",
-                "end": "嘉峪关",
-                "Transportation": "高铁"
-            },
-            {
-                "start": "午餐店（嘉峪关市区，推荐羊肉垫卷子）",
-                "end": "嘉峪关关城",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "嘉峪关关城",
-                "end": "嘉峪关高铁站",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "嘉峪关高铁站",
-                "end": "张掖",
-                "Transportation": "高铁"
-            },
-            {
-                "start": "张掖高铁站",
-                "end": "晚餐店（张掖市区，推荐搓鱼面、炒拨拉）",
-                "Transportation": "汽车"
-            }
-        ]
-    },
-    "day3": {
-        "title": "丹霞地貌+石窟探秘",
-        "topic": "自然奇观与民族风情",
-        "lodging": "张掖市区",
-        "restaurant": "丹霞景区附近（午）、张掖市区（晚）",
-        "travel_details": [
-            {
-                "time": "07:00-07:30",
-                "description": "早餐（张掖市区）"
-            },
-            {
-                "time": "08:00-12:00",
-                "description": "张掖丹霞国家地质公园（自然风光）<br>清晨色彩最艳丽，适合航拍。"
-            },
-            {
-                "time": "12:30-13:30",
-                "description": "午餐（景区附近农家菜或返回市区）"
-            },
-            {
-                "time": "14:00-17:00",
-                "description": "马蹄寺（民俗风情）<br>探访悬崖石窟，体验裕固族文化。"
-            },
-            {
-                "time": "17:30-18:30",
-                "description": "返回张掖市区，晚餐（推荐手抓羊肉、灰豆汤）"
-            }
-        ],
-        "routes": [
-            {
-                "start": "张掖市区早餐店",
-                "end": "张掖丹霞国家地质公园",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "张掖丹霞国家地质公园",
-                "end": "午餐（张掖市区寻找）",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "午餐（张掖市区寻找）",
-                "end": "马蹄寺",
-                "Transportation": "汽车"
-            },
-            {
-                "start": "马蹄寺",
-                "end": "张掖市区，晚餐（推荐手抓羊肉、灰豆汤）",
-                "Transportation": "汽车"
-            }
-        ]
-    }
-}
-    arrange_route_str = get_arrange_route(poi_info_list, json.dumps(daily_plan_str, ensure_ascii=False))
+#     daily_plan_str = {
+#     "day1": {
+#         "title": "敦煌文化+沙漠奇观",
+#         "topic": "佛教艺术与沙漠体验",
+#         "lodging": "敦煌市区",
+#         "restaurant": "敦煌市区（早/午/晚）",
+#         "travel_details": [
+#             {
+#                 "time": "07:00-08:00",
+#                 "description": "早餐（敦煌市区，推荐牛肉面、杏皮水）"
+#             },
+#             {
+#                 "time": "08:30-12:30",
+#                 "description": "莫高窟（历史文化）<br>参观洞窟壁画，需提前预约门票。"
+#             },
+#             {
+#                 "time": "12:30-13:30",
+#                 "description": "午餐（景区附近简餐或返回市区品尝驴肉黄面）"
+#             },
+#             {
+#                 "time": "14:00-17:30",
+#                 "description": "鸣沙山月牙泉（自然风光）<br>骑骆驼、滑沙，傍晚光线适合摄影。"
+#             },
+#             {
+#                 "time": "18:00-19:00",
+#                 "description": "晚餐（市区内，尝试敦煌酿皮、烤羊排）"
+#             }
+#         ],
+#         "routes": [
+#             {
+#                 "start": "敦煌市区早餐店，(推荐牛肉面、杏皮水）",
+#                 "end": "莫高窟",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "莫高窟",
+#                 "end": "午餐店（莫高窟景区附近简餐)",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "午餐店（莫高窟景区附近简餐)",
+#                 "end": "鸣沙山月牙泉",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "鸣沙山月牙泉",
+#                 "end": "晚餐店（敦煌市区内 尝试敦煌酿皮、烤羊排）",
+#                 "Transportation": "汽车"
+#             }
+#         ]
+#     },
+#     "day2": {
+#         "title": "雄关漫道+丹霞日落",
+#         "topic": "长城文化与地质奇观",
+#         "lodging": "张掖市区",
+#         "restaurant": "嘉峪关市区（午）、张掖市区（晚）",
+#         "travel_details": [
+#             {
+#                 "time": "07:00-07:30",
+#                 "description": "早餐后退房，前往敦煌高铁站"
+#             },
+#             {
+#                 "time": "08:00-12:00",
+#                 "description": "高铁前往嘉峪关（约4小时）"
+#             },
+#             {
+#                 "time": "12:00-13:00",
+#                 "description": "午餐（嘉峪关市区，推荐羊肉垫卷子）"
+#             },
+#             {
+#                 "time": "13:30-16:00",
+#                 "description": "嘉峪关关城（历史文化）<br>登城楼俯瞰戈壁，感受“天下第一雄关”气势。"
+#             },
+#             {
+#                 "time": "16:30-18:30",
+#                 "description": "高铁前往张掖（约2小时）"
+#             },
+#             {
+#                 "time": "19:00-20:00",
+#                 "description": "晚餐（张掖市区，推荐搓鱼面、炒拨拉）"
+#             }
+#         ],
+#         "routes": [
+#             {
+#                 "start": "敦煌市区早餐店",
+#                 "end": "敦煌高铁站",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "敦煌高铁站",
+#                 "end": "嘉峪关",
+#                 "Transportation": "高铁"
+#             },
+#             {
+#                 "start": "午餐店（嘉峪关市区，推荐羊肉垫卷子）",
+#                 "end": "嘉峪关关城",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "嘉峪关关城",
+#                 "end": "嘉峪关高铁站",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "嘉峪关高铁站",
+#                 "end": "张掖",
+#                 "Transportation": "高铁"
+#             },
+#             {
+#                 "start": "张掖高铁站",
+#                 "end": "晚餐店（张掖市区，推荐搓鱼面、炒拨拉）",
+#                 "Transportation": "汽车"
+#             }
+#         ]
+#     },
+#     "day3": {
+#         "title": "丹霞地貌+石窟探秘",
+#         "topic": "自然奇观与民族风情",
+#         "lodging": "张掖市区",
+#         "restaurant": "丹霞景区附近（午）、张掖市区（晚）",
+#         "travel_details": [
+#             {
+#                 "time": "07:00-07:30",
+#                 "description": "早餐（张掖市区）"
+#             },
+#             {
+#                 "time": "08:00-12:00",
+#                 "description": "张掖丹霞国家地质公园（自然风光）<br>清晨色彩最艳丽，适合航拍。"
+#             },
+#             {
+#                 "time": "12:30-13:30",
+#                 "description": "午餐（景区附近农家菜或返回市区）"
+#             },
+#             {
+#                 "time": "14:00-17:00",
+#                 "description": "马蹄寺（民俗风情）<br>探访悬崖石窟，体验裕固族文化。"
+#             },
+#             {
+#                 "time": "17:30-18:30",
+#                 "description": "返回张掖市区，晚餐（推荐手抓羊肉、灰豆汤）"
+#             }
+#         ],
+#         "routes": [
+#             {
+#                 "start": "张掖市区早餐店",
+#                 "end": "张掖丹霞国家地质公园",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "张掖丹霞国家地质公园",
+#                 "end": "午餐（张掖市区寻找）",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "午餐（张掖市区寻找）",
+#                 "end": "马蹄寺",
+#                 "Transportation": "汽车"
+#             },
+#             {
+#                 "start": "马蹄寺",
+#                 "end": "张掖市区，晚餐（推荐手抓羊肉、灰豆汤）",
+#                 "Transportation": "汽车"
+#             }
+#         ]
+#     }
+# }
+#     arrange_route_str = get_arrange_route(poi_info_list, json.dumps(daily_plan_str, ensure_ascii=False))
 
