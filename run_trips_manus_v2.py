@@ -144,7 +144,7 @@ def get_arrange_route(poi_info_list, daily_plan_str):
 
     # 提取所有标记对之间的内容
     arranged_pois = []
-    pattern = r'\[(P\d+|Restaurant|Hotel)_(?:START|END)\]([^\[]+)'
+    pattern = r'\[(P\d+|RESTAURANT|HOTEL)_(?:START|END)\]([^\[]+)'
     # pattern = r'\[(P\d+|Restaurant|Hotel)_(?:START|END|start|end)\]\s*([^\[]+?)\s*\[(P\d+|Restaurant|Hotel)_(?:START|END|start|end)\]'
 
     # 按顺序找出所有匹配项
@@ -213,8 +213,9 @@ async def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, e
     # ** 注意 **
     1.  输出采用markdown格式，每一天的行程安排都用分割线进行分割，第一天的输出前面也要加分割线
     2.  游玩的景区，需要加入 前后缀 [PX_START] 景点名称 [PX_END]，X是景点编号
-    3.  早/中/晚吃饭的地方，需要加入 前后缀 [RESTAURANT_START] 餐馆描述 [RESTAURANT_END]
-    4.  晚上住宿的地方，需要加入 前后缀 [HOTEL_START] 酒店 [HOTEL_END]
+    3.  早/中/晚吃饭的地方，需要加入 前后缀 [RESTAURANT_START] 餐馆名称描述 [RESTAURANT_END]
+    4.  晚上住宿的地方，需要加入 前后缀 [HOTEL_START] 酒店名称描述 [HOTEL_END]
+    5.  餐馆名称和酒店名称的所有信息，请统一输出在 前后缀 内部
     """ + recommend_scene_str
 
     sections = []
@@ -222,6 +223,9 @@ async def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, e
         if not section:
             continue
         print(f"收到新的当日规划:\n{section}\n")
+
+        if "RESTAURANT" not in section and "HOTEL" not in section:
+            continue
         sections.append(section)
         section = json.dumps(get_arrange_route(poi_info_list, section), ensure_ascii=False)
         # 这里你可以对每个section立即进行处理
