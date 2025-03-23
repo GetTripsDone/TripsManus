@@ -66,6 +66,25 @@ async def call_llm(sys_prompt: str, query: str, request_model: str):  # 移除�
         print(f"Error during streaming: {e}")
         return
 
+def parse_poi_section(section):
+    # 使用正则表达式匹配[PX_START]和[PX_END]之间的内容
+    import re
+    pattern = r'\[(P(\d+)_START)\]\s*([^\[]+?)\s*\[(P\d+_END)\]'
+    matches = re.findall(pattern, section)
+
+    if not matches:
+        return ('', '')
+
+    # 提取匹配到的景点名称和序号
+    # 只返回第一个匹配到的景点信息，因为每个section应该只包含一个景点
+    for match in matches:
+        start_tag, number, poi_name, end_tag = match
+        # 验证标签匹配
+        if start_tag.replace('START', '') == end_tag.replace('END', ''):
+            return (poi_name.strip(), f'P{number}')
+    return ('', '')
+
+
 async def get_recommend(city: str):
     global v3
     prompt = f"""
@@ -86,20 +105,97 @@ async def get_recommend(city: str):
     """
 
     sections = []
-    poi_list = []
+    poi_info_list = []
     async for section in call_llm("", prompt, v3):
         sections.append(section)
         # 这里你可以对每个section立即进行处理
         print(f"收到新的景点信息:\n{section}\n")
 
-        # TODO 请求对应的poi，返回结果
+        # 解析每个section,得到提取的poi name, poi_index(p1, p2, p3....)
+        poi_name, poi_index = parse_poi_section(section)
+        # 请求对应的poi，返回结果
+        poi_name, poi_location, poi_id, city_code = parse_res(execute(poi_name))  # poi_name是检索到的真实名称
+        time.sleep(0.8)
+        poi_info_dict = {
+            'poi_index': poi_index,
+            'poi_name': poi_name,
+            'location': poi_location,
+            'id': poi_id,
+            'city_code': city_code
+        }
+        poi_info_list.append(poi_info_dict)
+        print(f"收到新的POI检索信息:\n{poi_info_dict}\n")
 
-        # excecuse =
-        # TODO 调用poi接口，返回结果
-        # print()
-        # poi_list.append(excecuse)
+    return "\n".join(sections), poi_info_list
 
-    return "\n".join(sections)
+
+def get_arrange_route(poi_info_list, daily_plan_str):
+    '''
+    把markdown格式的每日计划和poi_info_list进行整合，一天的这是
+    Args:
+        poi_info_list: 包含POI信息的字典列表
+        daily_plan_str: markdown格式的每日计划字符串
+    Returns:
+        list: 按时间顺序排列的POI信息列表
+    '''
+    # 创建POI索引字典，方便查找
+    poi_dict = {str(poi['poi_index']): poi for poi in poi_info_list}
+
+    # 提取所有标记对之间的内容
+    arranged_pois = []
+    pattern = r'\[(P\d+|Restaurant|Hotel)_(?:START|END)\]([^\[]+)'
+
+    # 按顺序找出所有匹配项
+    import re
+    matches = re.finditer(pattern, daily_plan_str)
+    current_poi = None
+
+    for match in matches:
+        marker_type = match.group(1)  # P1, P2, Restaurant, Hotel等
+        poi_name = match.group(2).strip()
+
+        # 如果是START标记，处理POI信息
+        if '_START' in match.group(0):
+            if marker_type.startswith('P'):
+                # 对于Px类型的POI，从poi_info_list中查找
+                poi_index = marker_type
+                found = False
+                for poi_info in poi_info_list:
+                    if poi_info['poi_index'] == poi_index:
+                        current_poi = poi_info.copy()
+                        found = True
+                        break
+
+                if not found:
+                    # 如果在poi_info_list中没找到，需要重新搜索
+                    poi_info = parse_res(execute(poi_name)) if poi_name else ('', '', '', '')
+                    current_poi = {
+                        'poi_index': poi_index,
+                        'poi_name': poi_name,
+                        'location': poi_info[1],
+                        'id': poi_info[2],
+                        'city_code': poi_info[3]
+                    }
+            else:
+                # 对于Restaurant和Hotel类型，直接搜索
+                poi_info = parse_res(execute(poi_name)) if poi_name else ('', '', '', '')
+                current_poi = {
+                    'poi_index': marker_type.lower(),
+                    'poi_name': poi_name,
+                    'location': poi_info[1],
+                    'id': poi_info[2],
+                    'city_code': poi_info[3]
+                }
+
+        # 如果是END标记且有当前POI，添加到列表中
+        elif '_END' in match.group(0) and current_poi:
+            arranged_pois.append(current_poi)
+            current_poi = None
+
+    # 过滤掉location、id和city_code都为空的POI
+    arranged_pois = [poi for poi in arranged_pois if not (poi['location'] == '' or poi['city_code'] == '')]
+    return arranged_pois
+
 
 def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, end_time:str) -> str:
     global r1
@@ -309,7 +405,7 @@ def check_search_again(arrange_route_v2):
 
     return cleaned_routes
 
-def get_arrange_route(poi_info_list, daily_plan_str):
+def _get_arrange_route(poi_info_list, daily_plan_str):
     '''
         1、搜索daily_plan_str中存在，但是poi_info_list中不存在的景点
         2、根据daily_plan_str的信息搜索每天的食宿
@@ -357,9 +453,8 @@ async def main(city: str, start_time: str, end_time: str):
     # [SCENE_START] 黄山 [SCENE_END]
     # TDOO 推荐点 [P1_START] 邯郸博物馆 [P1_END]
     # 输出 P1 P2 P3的景点
-    recommend_scene_str = await get_recommend(city)
+    recommend_scene_str, poi_info_list = await get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    #poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
     #travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
     # 3. TODO 删掉这个流程
