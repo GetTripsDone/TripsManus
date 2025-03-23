@@ -101,18 +101,28 @@ async def get_recommend(city: str):
 
     return "\n".join(sections)
 
-def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, end_time:str) -> str:
-    global r1
+async def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, end_time:str) -> str:
+    global r1, v3
     prompt = f"""
     用户已经在{city}，根据如下提供的景点信息，规划一个从{start_time}到{end_time}时间的行程。
     包含餐饮和住宿，餐饮和住宿不用给出具体点，给出在什么位置进行餐饮和住宿即可。
-    包含详细的时间安排。你需要考虑一下各个地点之间的路线、距离和时间\n""" + recommend_scene_str
+    包含详细的时间安排和餐饮酒店住宿。你需要考虑一下各个地点之间的路线、距离和时间
 
-    travel_plan_str = call_llm("", prompt, v3)
+    # ** 注意 **
+    1.  输出采用markdown格式，每一天的行程安排都用分割线进行分割，第一天的输出前面也要加分割线
+    2.  游玩的景区，需要加入  [PX_START] 景点名称 [PX_END]，X是景点编号
+    3.  早/中/晚吃饭的地方，需要加入 [Restaurant_start] 餐馆描述 [Restaurant_End]
+    4. 晚上住宿的地方，需要加入 [Hotel_Start] 酒店 [Hotel_End]
 
-    print(f"In Travel Plan:\n{travel_plan_str}")
+    """ + recommend_scene_str
 
-    return travel_plan_str
+    sections = []
+    async for section in call_llm("", prompt, v3):
+        sections.append(section)
+        # 这里你可以对每个section立即进行处理
+        print(f"收到新的行程信息:\n{section}\n")
+
+    return "\n".join(sections)
 
 def get_daily_plan(travel_plan_str: str) -> str:
     global v3
@@ -361,7 +371,7 @@ async def main(city: str, start_time: str, end_time: str):
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
     #poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
-    #travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
+    travel_plan_str = await get_travel_plan(city, recommend_scene_str, start_time, end_time)
     # 3. TODO 删掉这个流程
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
     # daily_plan_str = get_daily_plan(travel_plan_str)
