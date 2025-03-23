@@ -327,15 +327,17 @@ def get_arrange_route(poi_info_list, daily_plan_str):
 
 def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
+    # [SCENE_START] 黄山 [SCENE_END]
+    # TDOO 推荐点 [P1_START] 邯郸博物馆 [P1_END]
     # 输出 P1 P2 P3的景点
     recommend_scene_str = get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
     poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
     travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
-    # 3.
+    # 3. TODO 删掉这个流程
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
-    daily_plan_str = get_daily_plan(travel_plan_str)
+    # daily_plan_str = get_daily_plan(travel_plan_str)
 
     # 并行分支 4.1 将每天的行程 返回给端上
     #format_to_show_json = format_show(daily_plan_str)
