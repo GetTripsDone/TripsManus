@@ -6,14 +6,20 @@ from typing import Dict, Optional
 import requests
 import time
 from app.tool import arrange_days
-from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE
+from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE, recomend_scence_str_mock, arrange_route_str_mock
 
-r1 = "deepseek-ai/DeepSeek-R1"
-v3 = "deepseek-ai/DeepSeek-V3"
+#r1 = "deepseek-ai/DeepSeek-R1"
+#v3 = "deepseek-ai/DeepSeek-V3"
+
+r1 = "deepseek-r1-250120"
+v3 = "deepseek-v3-241226"
 
 def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
-    client = OpenAI(api_key="sk-ytpminknxtdkehuanngvpnnspxgfimhllugjqrywwysuknmj",
-                    base_url="https://api.siliconflow.cn/v1")
+    #client = OpenAI(api_key="sk-ytpminknxtdkehuanngvpnnspxgfimhllugjqrywwysuknmj",
+    #                base_url="https://api.siliconflow.cn/v1")
+
+    client = OpenAI(api_key="cb9729a7-aa90-459f-8315-4ae41a6132f3",
+                    base_url="https://ark.cn-beijing.volces.com/api/v3")
 
     if sys_prompt == "":
         response = client.chat.completions.create(
@@ -45,13 +51,7 @@ def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
     # content role annotations audio
     # refusal function_call tool_calls
 
-    ret = ""
-
-    if request_model == r1:
-        ret = response.choices[0].message.reasoning_content
-    else:
-        ret = response.choices[0].message.content
-
+    ret = response.choices[0].message.content
     return ret
 
 def get_recommend(city: str):
@@ -88,13 +88,18 @@ def get_travel_plan(recommend_scene_str: str, start_time:str, end_time:str) -> s
     return travel_plan_str
 
 def get_daily_plan(travel_plan_str: str) -> str:
-    global r1
+    global v3
     prompt = Daily_Plan_UserPrompt + travel_plan_str
 
     daily_plan_str = call_llm(Daily_Plan_SysPrompt, prompt, v3)
 
-    print(f"In Daily Plan:\n{daily_plan_str}")
-    return daily_plan_str
+    ret = daily_plan_str
+    if "```json" in daily_plan_str and "```" in daily_plan_str:
+        json_str = daily_plan_str.split("```json")[1].split("```")[0]
+        ret = json_str
+
+    print(f"In Daily Plan:\n{ret}")
+    return ret
 
 def execute(
         keywords: str,
@@ -107,6 +112,7 @@ def execute(
 
     try:
         response = requests.get(url, params=params)
+        time.sleep(0.8)
         result = response.json()
         if result.get("status") == "1":
             return result
@@ -149,7 +155,10 @@ def execute_navi(
 
 
 def parse_res(res):
-    result = res['pois'][0]
+    result = res['pois']
+    if not result:
+        return '', '', '', ''
+    result = result[0]
     poi_name = result['name']
     poi_location = result['location']
     poi_id = result['id']
@@ -159,9 +168,7 @@ def parse_res(res):
 def extract_search_poi(recommend_scene_str):
     response = call_llm(PROMPT_JSON, mock_input_text, v3)
     response = json.loads(response)
-    # [{"name": "故宫博物院", "city": "北京", "description": "明清两代皇家宫殿建筑群，世界文化遗产", "duration": "3.5"},
-    #  {"name": "天坛公园", "city": "北京", "description": "明清皇帝祭天祈谷的祭坛建筑群", "duration": "2.5"},
-    # {"name":"八达岭长城", "city": "北京", "description": "保存最完好的明长城精华段", "duration": "5"}]
+    # {"name":"八达岭长城", "city": "北京", "description": "保存最完好的明长城精华段", "duration": "5"}
     res_list = []
     for poi in response:
         name, city, description, duration = poi["name"], poi["city"], poi["description"], poi["duration"]
@@ -169,7 +176,7 @@ def extract_search_poi(recommend_scene_str):
         poi_name, poi_location, poi_id, city_code = parse_res(res)  # poi_name是检索到的真实名称
         if poi_name == "":
             continue
-        time.sleep(0.5)
+        time.sleep(0.8)
         poi_info_dict = {
             'name': name,
             'poi_name': poi_name,
@@ -195,21 +202,23 @@ def search_again(arrange_route_v1):
             start = route['start']
             start_location = start['location']
             if not start_location:
-                res = execute(start['name'])  # name是抽取的名称
+                res = execute(start['name'])  # name是锦艺那边抽取的名称
+                print('end_name: ', start['name'])
                 _, start_location, _, start_city_code = parse_res(res)
                 # 更新起点信息
                 route['start']['location'] = start_location
                 route['start']['city_code'] = start_city_code
-
+            print('start_location done')
             end = route['end']
             end_location = end['location']
             if not end_location:
+                print('end_name: ', end['name'])
                 res = execute(end['name'])  # name是抽取的名称
                 _, end_location, _, end_city_code = parse_res(res)
                 # 更新终点信息
                 route['end']['location'] = end_location
                 route['end']['city_code'] = end_city_code
-
+            print('end_location done')
             # 更新routes中的route
             routes[i] = route
         # 更新arrange_route_v2中的routes
@@ -248,6 +257,31 @@ def search_navi(arrange_route_v2):
         arrange_route_v3[day] = new_routes
     return arrange_route_v3
 
+
+def check_search_again(arrange_route_v2):
+    """检查并清理路线数据中location为空的路段
+
+    Args:
+        arrange_route_v2 (dict): 包含每日路线信息的字典
+
+    Returns:
+        dict: 清理后的路线数据
+    """
+    cleaned_routes = {}
+
+    for day, routes in arrange_route_v2.items():
+        # 过滤掉location为空的路段
+        valid_routes = []
+        for route in routes:
+            if (route.get('start', {}).get('location') and
+                route.get('end', {}).get('location')):
+                valid_routes.append(route)
+
+        if valid_routes:  # 只有当有效路段存在时才添加到结果中
+            cleaned_routes[day] = valid_routes
+
+    return cleaned_routes
+
 def get_arrange_route(poi_info_list, daily_plan_str):
     '''
         1、搜索daily_plan_str中存在，但是poi_info_list中不存在的景点
@@ -257,113 +291,70 @@ def get_arrange_route(poi_info_list, daily_plan_str):
 
     daily_plan = json.loads(daily_plan_str)
     # {day1: {routes: [{start, end, Transportation}, {start, end, Transportation}, ...]}, day2: {routes: [{start, end, Transportation}, {start, end, Transportation}, ...]}}
+    # 简化plan的格式
     simplify_plan = {}
     for day, value in daily_plan.items():
         routes = value['routes']  # list
         simplify_plan[day] = routes  # [{start, end, Transportation}, {start, end, Transportation}, ...]
-
     # 使用PROMPT_COMBINE作为系统提示词，并代入实际参数
-    # prompt = PROMPT_COMBINE.format(
-    #     simplify_plan=json.dumps(simplify_plan, ensure_ascii=False),
-    #     poi_info_list=json.dumps(poi_info_list, ensure_ascii=False)
-    # )
     prompt = PROMPT_COMBINE.replace('{simplify_plan}', json.dumps(simplify_plan, ensure_ascii=False)).replace('{poi_info_list}', json.dumps(poi_info_list, ensure_ascii=False))
     print('sty play the game')
     # 调用r1模型生成路线安排结果
-    global r1
-    arrange_route_str = call_llm(prompt, "", r1)
+    global v3
+    arrange_route_str = call_llm("", prompt, v3)
+    if "```json" in arrange_route_str and "```" in arrange_route_str:
+        arrange_route_str = arrange_route_str.split("```json")[1].split("```")[0]
     print(arrange_route_str)
-    print('='*20)
+
+    # print('='*20)
     arrange_route_v1 = json.loads(arrange_route_str)
+    # arrange_route_v1 = json.loads(arrange_route_str_mock)  # mock数据
     print(arrange_route_v1)
     print('='*20)
     # 重新搜索没搜到的点
     arrange_route_v2 = search_again(arrange_route_v1)
+    arrange_route_v2 = check_search_again(arrange_route_v2)  # 校验格式
     print(arrange_route_v2)
-    print('='*20)
-    # 搜路返回结果
-    arrange_route_v3 = search_navi(arrange_route_v2)
-    print(arrange_route_v3)
-    print('='*20)
-    arrange_route_str = json.dumps(arrange_route_v3, ensure_ascii=False)
-    return arrange_route_str
+
+    # 搜路逻辑暂时不要
+    # print('='*20)
+    # # 搜路返回结果
+    # arrange_route_v3 = search_navi(arrange_route_v2)
+    # print(arrange_route_v3)
+    # print('='*20)
+    # arrange_route_str = json.dumps(arrange_route_v3, ensure_ascii=False)
+    return arrange_route_v2
 
 def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     recommend_scene_str = get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    poi_info_list = extract_search_poi(recommend_scene_str)
+    poi_info_list = extract_search_poi(recommend_scene_str)  # 先用mock数据
+    # print('poi_list:\n', poi_info_list)
     # 并行分支 2.2 使用景区请求 R1 获取对应 每一天的行程安排，带时间和住宿
-    travel_plan_str = get_travel_plan(recommend_scene_str, start_time, end_time)
+    # travel_plan_str = get_travel_plan(recommend_scene_str, start_time, end_time)
     # 3.
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
-    daily_plan_str = get_daily_plan(travel_plan_str)
-
-    # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
-    arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
+    # daily_plan_str = get_daily_plan(travel_plan_str)
 
     # 并行分支 4.1 将每天的行程 返回给端上
-    format_to_show_json = format_show(daily_plan_str)
-    # 并行分支 4.2 请求高德路线接口，获取路线结果，返回给端上呈现
-    route_result = get_route_result(daily_plan_str)
+    #format_to_show_json = format_show(daily_plan_str)
+
+    # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
+    # arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
+
     # 5. 路线结果格式化成返回给端上的格式
-    format_route_result = format_route(route_result)
+    #format_route_result = format_route(route_result)
 
     return
 
 if __name__ == "__main__":
-    city = "北京"
+    city = "上海"
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 
     # main(city, start_time, end_time)
-    poi_info_list = [
-    {
-        'name': '莫高窟',
-        'poi_name': '莫高窟',
-        'location': '敦煌市',
-        'id': '62010001',
-        'city_code': '0937',
-        'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑',
-        'duration': '3.5'
-    },
-    {
-        'name': '鸣沙山月牙泉',
-        'poi_name': '鸣沙山月牙泉',
-        'location': '敦煌市',
-        'id': '62010002',
-        'city_code': '0937',
-        'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙',
-        'duration': '2.5'
-    },
-    {
-        'name': '嘉峪关关城',
-        'poi_name': '嘉峪关关城',
-        'location': '嘉峪关市',
-        'id': '62020001',
-        'city_code': '0937',
-        'description': '明代万里长城的西端起点，被誉为“天下第一雄关”',
-        'duration': '2.5'
-    },
-    {
-        'name': '张掖丹霞国家地质公园',
-        'poi_name': '张掖丹霞国家地质公园',
-        'location': '张掖市临泽县和肃南县',
-        'id': '62070001',
-        'city_code': '0936',
-        'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂',
-        'duration': '3.5'
-    },
-    {
-        'name': '马蹄寺',
-        'poi_name': '马蹄寺',
-        'location': '张掖市肃南裕固族自治县',
-        'id': '62070002',
-        'city_code': '0936',
-        'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区',
-        'duration': '2.5'
-    }
-]
+    poi_info_list = [{'name': '张掖丹霞国家地质公园', 'poi_name': '张掖世界地质公园', 'location': '100.042200,38.975330', 'id': 'B03A813VVF', 'city_code': '0936', 'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂。', 'duration': '3.5'}, {'name': '鸣沙山月牙泉', 'poi_name': '鸣沙山月牙泉', 'location': '94.680396,40.088833', 'id': 'B03A9000ZN', 'city_code': '0937', 'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙。', 'duration': '2.5'}, {'name': '麦积山石窟', 'poi_name': '麦积山石窟', 'location': '106.008075,34.350764', 'id': 'B03AA005RW', 'city_code': '0938', 'description': '以精美的泥塑艺术闻名，是中国四大石窟之一。', 'duration': '2.5'}, {'name': '莫高窟', 'poi_name': '莫高窟景区', 'location': '94.809374,40.042511', 'id': 'B03A900102', 'city_code': '0937', 'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑。', 'duration': '3.5'}, {'name': '嘉峪关关城', 'poi_name': '嘉峪关文物景区', 'location': '98.228494,39.801021', 'id': 'B079100049', 'city_code': '1937', 'description': '明代万里长城的西端起点，被判为“天下第一雄关”。', 'duration': '2.5'}, {'name': '拉卜楞寺', 'poi_name': '拉卜楞寺', 'location': '102.509660,35.192953', 'id': 'B03AD001JE', 'city_code': '0941', 'description': '藏传佛教格鲁派六大寺院之一，拥有丰富的宗教文化和建筑艺术。', 'duration': '2.5'}, {'name': '郎木寺', 'poi_name': '郎木寺院', 'location': '102.632929,34.092557', 'id': 'B03AD009J5', 'city_code': '0941', 'description': '藏传佛教寺院，周围风景优美，是体验藏族文化的好去处。', 'duration': '2.5'}, {'name': '夏河桑科草原', 'poi_name': '桑科草原', 'location': '102.434001,35.110502', 'id': 'B0HR2ZSWZL', 'city_code': '0941', 'description': '广阔的草原风光，可以体验骑马和藏族民俗活动。', 'duration': '3.5'}, {'name': '临夏八坊十三巷', 'poi_name': '八坊十三巷', 'location': '103.210271,35.591251', 'id': 'B0FFIK006P', 'city_code': '0930', 'description': '回族文化街区，充满了浓郁的民族风情和历史文化。', 'duration': '2.5'}, {'name': '黄河石林', 'poi_name': '黄河石林国家地质公园', 'location': '104.314490,36.892922', 'id': 'B03AF002D7', 'city_code': '0943', 'description': '以奇特的石林地貌和黄河风光相结合，景色壮丽。', 'duration': '3.5'}, {'name': '崆峒山', 'poi_name': '崆峒山风景名胜区', 'location': '106.530016,35.547444', 'id': 'B03A500C84', 'city_code': '0933', 'description': '道教名山，风景秀丽，文化底蕴深厚。', 'duration': '3.5'}, {'name': '马蹄寺', 'poi_name': '马蹄生态文化旅游区', 'location': '100.416624,38.484258', 'id': 'B03A8005PU', 'city_code': '0936', 'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区。', 'duration': '2.5'}]
 
     daily_plan_str = {
     "day1": {
@@ -532,5 +523,4 @@ if __name__ == "__main__":
     }
 }
     arrange_route_str = get_arrange_route(poi_info_list, json.dumps(daily_plan_str, ensure_ascii=False))
-    print(arrange_route_str)
 
