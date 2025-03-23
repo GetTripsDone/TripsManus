@@ -14,65 +14,92 @@ from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSO
 r1 = "deepseek-r1-250120"
 v3 = "deepseek-v3-241226"
 
-def call_llm(sys_prompt: str, query: str, request_model: str) -> str:
-    #client = OpenAI(api_key="sk-ytpminknxtdkehuanngvpnnspxgfimhllugjqrywwysuknmj",
-    #                base_url="https://api.siliconflow.cn/v1")
-
+async def call_llm(sys_prompt: str, query: str, request_model: str):  # 移除返回类型标注
     client = OpenAI(api_key="cb9729a7-aa90-459f-8315-4ae41a6132f3",
                     base_url="https://ark.cn-beijing.volces.com/api/v3")
 
     if sys_prompt == "":
         response = client.chat.completions.create(
-                model= request_model,
+                model=request_model,
                 messages=[
                     {"role": "user", "content": query},
                 ],
-
-                stream=False,
+                stream=True,
                 temperature=1.0,
         )
     else:
         response = client.chat.completions.create(
-                model= request_model,
+                model=request_model,
                 messages=[
                     {"role": "system", "content": sys_prompt},
                     {"role": "user", "content": query},
                 ],
-
-                stream=False,
+                stream=True,
                 temperature=1.0,
         )
 
-    #print(f"llm response is {response}")
-    #print(f"llm response content is {response.choices[0].message}")
+    current_section = []
+    try:
+        for chunk in response:
+            if chunk.choices[0].delta.content is not None:
+                content_piece = chunk.choices[0].delta.content
+                #print(content_piece, end="", flush=True)
 
-    # message 数据结构
-    # reasoning_content (r1 独有)
-    # content role annotations audio
-    # refusal function_call tool_calls
+                # 检查是否包含分割线
+                if "---" in content_piece:
+                    # 如果当前段落不为空，yield当前段落
+                    if current_section:
+                        section = "".join(current_section).strip()
+                        if section and "---" in section:
+                            yield section
+                        current_section = []
 
-    ret = response.choices[0].message.content
-    return ret
+                current_section.append(content_piece)
 
-def get_recommend(city: str):
+        # yield最后一个段落
+        if current_section:
+            section = "".join(current_section).strip()
+            if section and "---" in section:
+                yield section
+
+    except Exception as e:
+        print(f"Error during streaming: {e}")
+        return
+
+async def get_recommend(city: str):
     global v3
     prompt = f"""
     推荐尽可能多的{city}值得一去的景点
-    输入格式是markdown：
+
+    输入格式：markdown
+    景点名称按照顺序进行标号：[PX_START] 景点名称 [PX_END]，X是景点编号
+    每个景点的完整信息：使用 markdown的分割线进行分割，注意第一行的前置也需要先包含一个分割线
 
     # 类别1
-    1. 景点名称
-     - 所在地点
-     - 景点介绍
-     - 预估游玩时长
+    ---
+    1. [P1_START] 景点名称 [P1_END]
+    - 所在地点
+    - 景点介绍
+    - 预估游玩时长
+    ---
     ...
     """
 
-    recommend_scene_str = call_llm("", prompt, v3)
+    sections = []
+    poi_list = []
+    async for section in call_llm("", prompt, v3):
+        sections.append(section)
+        # 这里你可以对每个section立即进行处理
+        print(f"收到新的景点信息:\n{section}\n")
 
-    print(f"In Recommend:\n{recommend_scene_str}")
+        # TODO 请求对应的poi，返回结果
 
-    return recommend_scene_str
+        # excecuse =
+        # TODO 调用poi接口，返回结果
+        # print()
+        # poi_list.append(excecuse)
+
+    return "\n".join(sections)
 
 def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, end_time:str) -> str:
     global r1
@@ -325,16 +352,16 @@ def get_arrange_route(poi_info_list, daily_plan_str):
     # arrange_route_str = json.dumps(arrange_route_v3, ensure_ascii=False)
     return arrange_route_v2
 
-def main(city: str, start_time: str, end_time: str):
+async def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     # [SCENE_START] 黄山 [SCENE_END]
     # TDOO 推荐点 [P1_START] 邯郸博物馆 [P1_END]
     # 输出 P1 P2 P3的景点
-    recommend_scene_str = get_recommend(city)
+    recommend_scene_str = await get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    poi_info_list = extract_search_poi(recommend_scene_str)
+    #poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
-    travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
+    #travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
     # 3. TODO 删掉这个流程
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
     # daily_plan_str = get_daily_plan(travel_plan_str)
@@ -343,7 +370,7 @@ def main(city: str, start_time: str, end_time: str):
     #format_to_show_json = format_show(daily_plan_str)
 
     # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
-    arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
+    # arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
 
     # 5. 路线结果格式化成返回给端上的格式
     #format_route_result = format_route(route_result)
@@ -355,7 +382,8 @@ if __name__ == "__main__":
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 
-    main(city, start_time, end_time)
+    import asyncio
+    asyncio.run(main(city, start_time, end_time))
 
     poi_info_list = [{'name': '张掖丹霞国家地质公园', 'poi_name': '张掖世界地质公园', 'location': '100.042200,38.975330', 'id': 'B03A813VVF', 'city_code': '0936', 'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂。', 'duration': '3.5'}, {'name': '鸣沙山月牙泉', 'poi_name': '鸣沙山月牙泉', 'location': '94.680396,40.088833', 'id': 'B03A9000ZN', 'city_code': '0937', 'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙。', 'duration': '2.5'}, {'name': '麦积山石窟', 'poi_name': '麦积山石窟', 'location': '106.008075,34.350764', 'id': 'B03AA005RW', 'city_code': '0938', 'description': '以精美的泥塑艺术闻名，是中国四大石窟之一。', 'duration': '2.5'}, {'name': '莫高窟', 'poi_name': '莫高窟景区', 'location': '94.809374,40.042511', 'id': 'B03A900102', 'city_code': '0937', 'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑。', 'duration': '3.5'}, {'name': '嘉峪关关城', 'poi_name': '嘉峪关文物景区', 'location': '98.228494,39.801021', 'id': 'B079100049', 'city_code': '1937', 'description': '明代万里长城的西端起点，被判为“天下第一雄关”。', 'duration': '2.5'}, {'name': '拉卜楞寺', 'poi_name': '拉卜楞寺', 'location': '102.509660,35.192953', 'id': 'B03AD001JE', 'city_code': '0941', 'description': '藏传佛教格鲁派六大寺院之一，拥有丰富的宗教文化和建筑艺术。', 'duration': '2.5'}, {'name': '郎木寺', 'poi_name': '郎木寺院', 'location': '102.632929,34.092557', 'id': 'B03AD009J5', 'city_code': '0941', 'description': '藏传佛教寺院，周围风景优美，是体验藏族文化的好去处。', 'duration': '2.5'}, {'name': '夏河桑科草原', 'poi_name': '桑科草原', 'location': '102.434001,35.110502', 'id': 'B0HR2ZSWZL', 'city_code': '0941', 'description': '广阔的草原风光，可以体验骑马和藏族民俗活动。', 'duration': '3.5'}, {'name': '临夏八坊十三巷', 'poi_name': '八坊十三巷', 'location': '103.210271,35.591251', 'id': 'B0FFIK006P', 'city_code': '0930', 'description': '回族文化街区，充满了浓郁的民族风情和历史文化。', 'duration': '2.5'}, {'name': '黄河石林', 'poi_name': '黄河石林国家地质公园', 'location': '104.314490,36.892922', 'id': 'B03AF002D7', 'city_code': '0943', 'description': '以奇特的石林地貌和黄河风光相结合，景色壮丽。', 'duration': '3.5'}, {'name': '崆峒山', 'poi_name': '崆峒山风景名胜区', 'location': '106.530016,35.547444', 'id': 'B03A500C84', 'city_code': '0933', 'description': '道教名山，风景秀丽，文化底蕴深厚。', 'duration': '3.5'}, {'name': '马蹄寺', 'poi_name': '马蹄生态文化旅游区', 'location': '100.416624,38.484258', 'id': 'B03A8005PU', 'city_code': '0936', 'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区。', 'duration': '2.5'}]
 
