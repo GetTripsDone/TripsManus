@@ -112,7 +112,7 @@ def execute(
 
     try:
         response = requests.get(url, params=params)
-        time.sleep(0.8)
+        time.sleep(1)
         result = response.json()
         if result.get("status") == "1":
             return result
@@ -166,7 +166,7 @@ def parse_res(res):
     return poi_name, poi_location, poi_id, city_code
 
 def extract_search_poi(recommend_scene_str):
-    response = call_llm(PROMPT_JSON, mock_input_text, v3)
+    response = call_llm(PROMPT_JSON, recommend_scene_str, v3)
     response = json.loads(response)
     # {"name":"八达岭长城", "city": "北京", "description": "保存最完好的明长城精华段", "duration": "5"}
     res_list = []
@@ -176,7 +176,7 @@ def extract_search_poi(recommend_scene_str):
         poi_name, poi_location, poi_id, city_code = parse_res(res)  # poi_name是检索到的真实名称
         if poi_name == "":
             continue
-        time.sleep(0.8)
+        time.sleep(1)
         poi_info_dict = {
             'name': name,
             'poi_name': poi_name,
@@ -304,17 +304,17 @@ def get_arrange_route(poi_info_list, daily_plan_str):
     arrange_route_str = call_llm("", prompt, v3)
     if "```json" in arrange_route_str and "```" in arrange_route_str:
         arrange_route_str = arrange_route_str.split("```json")[1].split("```")[0]
-    print(arrange_route_str)
+    print(f"prompt result arrange route {arrange_route_str}")
 
     # print('='*20)
     arrange_route_v1 = json.loads(arrange_route_str)
     # arrange_route_v1 = json.loads(arrange_route_str_mock)  # mock数据
-    print(arrange_route_v1)
+    print(f"json result arrange route {arrange_route_v1}")
     print('='*20)
     # 重新搜索没搜到的点
     arrange_route_v2 = search_again(arrange_route_v1)
     arrange_route_v2 = check_search_again(arrange_route_v2)  # 校验格式
-    print(arrange_route_v2)
+    print(f"the final route with location {arrange_route_v2}")
 
     # 搜路逻辑暂时不要
     # print('='*20)
@@ -329,18 +329,18 @@ def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     recommend_scene_str = get_recommend(city)
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
-    # poi_info_list = extract_search_poi(recommend_scene_str)
+    poi_info_list = extract_search_poi(recommend_scene_str)
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
     travel_plan_str = get_travel_plan(city, recommend_scene_str, start_time, end_time)
     # 3.
     # 根据 分支 2.2 通过 prompt 抽取 json 的行程安排
-    # daily_plan_str = get_daily_plan(travel_plan_str)
+    daily_plan_str = get_daily_plan(travel_plan_str)
 
     # 并行分支 4.1 将每天的行程 返回给端上
     #format_to_show_json = format_show(daily_plan_str)
 
     # 4. 根据 分支 3 的行程安排，请求高德路线接口，获取路线结果
-    # arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
+    arrange_route_str = get_arrange_route(poi_info_list, daily_plan_str)
 
     # 5. 路线结果格式化成返回给端上的格式
     #format_route_result = format_route(route_result)
@@ -352,7 +352,8 @@ if __name__ == "__main__":
     start_time = "2025-03-10"
     end_time = "2025-03-13"
 
-    # main(city, start_time, end_time)
+    main(city, start_time, end_time)
+
     poi_info_list = [{'name': '张掖丹霞国家地质公园', 'poi_name': '张掖世界地质公园', 'location': '100.042200,38.975330', 'id': 'B03A813VVF', 'city_code': '0936', 'description': '以其色彩斑斓的丹霞地貌著称，是摄影爱好者的天堂。', 'duration': '3.5'}, {'name': '鸣沙山月牙泉', 'poi_name': '鸣沙山月牙泉', 'location': '94.680396,40.088833', 'id': 'B03A9000ZN', 'city_code': '0937', 'description': '沙漠与清泉共存的奇观，可以体验骑骆驼和滑沙。', 'duration': '2.5'}, {'name': '麦积山石窟', 'poi_name': '麦积山石窟', 'location': '106.008075,34.350764', 'id': 'B03AA005RW', 'city_code': '0938', 'description': '以精美的泥塑艺术闻名，是中国四大石窟之一。', 'duration': '2.5'}, {'name': '莫高窟', 'poi_name': '莫高窟景区', 'location': '94.809374,40.042511', 'id': 'B03A900102', 'city_code': '0937', 'description': '世界文化遗产，拥有丰富的佛教艺术壁画和雕塑。', 'duration': '3.5'}, {'name': '嘉峪关关城', 'poi_name': '嘉峪关文物景区', 'location': '98.228494,39.801021', 'id': 'B079100049', 'city_code': '1937', 'description': '明代万里长城的西端起点，被判为“天下第一雄关”。', 'duration': '2.5'}, {'name': '拉卜楞寺', 'poi_name': '拉卜楞寺', 'location': '102.509660,35.192953', 'id': 'B03AD001JE', 'city_code': '0941', 'description': '藏传佛教格鲁派六大寺院之一，拥有丰富的宗教文化和建筑艺术。', 'duration': '2.5'}, {'name': '郎木寺', 'poi_name': '郎木寺院', 'location': '102.632929,34.092557', 'id': 'B03AD009J5', 'city_code': '0941', 'description': '藏传佛教寺院，周围风景优美，是体验藏族文化的好去处。', 'duration': '2.5'}, {'name': '夏河桑科草原', 'poi_name': '桑科草原', 'location': '102.434001,35.110502', 'id': 'B0HR2ZSWZL', 'city_code': '0941', 'description': '广阔的草原风光，可以体验骑马和藏族民俗活动。', 'duration': '3.5'}, {'name': '临夏八坊十三巷', 'poi_name': '八坊十三巷', 'location': '103.210271,35.591251', 'id': 'B0FFIK006P', 'city_code': '0930', 'description': '回族文化街区，充满了浓郁的民族风情和历史文化。', 'duration': '2.5'}, {'name': '黄河石林', 'poi_name': '黄河石林国家地质公园', 'location': '104.314490,36.892922', 'id': 'B03AF002D7', 'city_code': '0943', 'description': '以奇特的石林地貌和黄河风光相结合，景色壮丽。', 'duration': '3.5'}, {'name': '崆峒山', 'poi_name': '崆峒山风景名胜区', 'location': '106.530016,35.547444', 'id': 'B03A500C84', 'city_code': '0933', 'description': '道教名山，风景秀丽，文化底蕴深厚。', 'duration': '3.5'}, {'name': '马蹄寺', 'poi_name': '马蹄生态文化旅游区', 'location': '100.416624,38.484258', 'id': 'B03A8005PU', 'city_code': '0936', 'description': '集石窟艺术、祁连山风光和裕固族风情于一体的旅游景区。', 'duration': '2.5'}]
 
     daily_plan_str = {
@@ -521,5 +522,5 @@ if __name__ == "__main__":
         ]
     }
 }
-    arrange_route_str = get_arrange_route(poi_info_list, json.dumps(daily_plan_str, ensure_ascii=False))
+    #arrange_route_str = get_arrange_route(poi_info_list, json.dumps(daily_plan_str, ensure_ascii=False))
 
