@@ -88,7 +88,7 @@ def parse_poi_section(section):
 async def get_recommend(city: str):
     global v3
     prompt = f"""
-    推荐{city}值得一去的景点
+    推荐{city}值得一去的景点，尽可能多一些
 
     输入格式：markdown
     景点名称按照顺序进行标号：[PX_START] 景点名称 [PX_END]，X是景点编号
@@ -140,63 +140,57 @@ def get_arrange_route(poi_info_list, daily_plan_str):
         list: 按时间顺序排列的POI信息列表
     '''
     # 创建POI索引字典，方便查找
-    poi_dict = {str(poi['poi_index']): poi for poi in poi_info_list}
 
     # 提取所有标记对之间的内容
     arranged_pois = []
-    pattern = r'\[(P\d+|RESTAURANT|HOTEL)_(?:START|END)\]([^\[]+)'
-    # pattern = r'\[(P\d+|Restaurant|Hotel)_(?:START|END|start|end)\]\s*([^\[]+?)\s*\[(P\d+|Restaurant|Hotel)_(?:START|END|start|end)\]'
 
-    # 按顺序找出所有匹配项
     import re
-    daily_plan_str = daily_plan_str.replace('_End', '_END').replace('_Start', '_START').replace('_start', '_START').replace('_end', '_END')
-    matches = re.finditer(pattern, daily_plan_str)
     current_poi = None
 
-    for match in matches:
-        marker_type = match.group(1)  # P1, P2, Restaurant, Hotel等
+    for match in re.finditer(r'\[(RESTAURANT|HOTEL|P\d+)_START\]\s*(\d{2}:\d{2}(?:\s*-\s*\d{2}:\d{2})?):?\s*(.+?)\s*\[\1_END\]', daily_plan_str):
+        marker_type = match.group(1)
+        time_info = match.group(2)
+        poi_name = match.group(3)
         # print('marker_type:\n', marker_type)
-        poi_name = match.group(2).strip()
 
         # 如果是START标记，处理POI信息
-        if '_START' in match.group(0):
-            if marker_type.startswith('P'):
-                # 对于Px类型的POI，从poi_info_list中查找
-                poi_index = marker_type
-                found = False
-                for poi_info in poi_info_list:
-                    if poi_info['poi_index'] == poi_index:
-                        current_poi = poi_info.copy()
-                        found = True
-                        break
+        if marker_type.startswith('P'):
+            # 对于Px类型的POI，从poi_info_list中查找
+            poi_index = marker_type
+            found = False
+            for poi_info in poi_info_list:
+                if poi_info['poi_index'] == poi_index:
+                    current_poi = poi_info.copy()
+                    current_poi['time_info'] = time_info
+                    found = True
+                    break
 
-                if not found:
-                    # 如果在poi_info_list中没找到，需要重新搜索
-                    poi_info = parse_res(execute(poi_name)) if poi_name else ('', '', '', '')
-                    current_poi = {
-                        'poi_index': poi_index,
-                        'poi_name': poi_name,
-                        'location': poi_info[1],
-                        'id': poi_info[2],
-                        'city_code': poi_info[3]
-                    }
-            else:
-                # 对于Restaurant和Hotel类型，直接搜索
-                # print('marker_type:\n', marker_type)
-                # print('poi_name:\n', poi_name)
+            if not found:
+                # 如果在poi_info_list中没找到，需要重新搜索
                 poi_info = parse_res(execute(poi_name)) if poi_name else ('', '', '', '')
                 current_poi = {
-                    'poi_index': marker_type.lower(),
+                    'poi_index': poi_index,
                     'poi_name': poi_name,
                     'location': poi_info[1],
                     'id': poi_info[2],
-                    'city_code': poi_info[3]
+                    'city_code': poi_info[3],
+                    'time_info': time_info
                 }
+        else:
+            # 对于Restaurant和Hotel类型，直接搜索
+            poi_info = parse_res(execute(poi_name)) if poi_name else ('', '', '', '')
+            current_poi = {
+                'poi_index': marker_type,
+                'poi_name': poi_name,
+                'location': poi_info[1],
+                'id': poi_info[2],
+                'city_code': poi_info[3],
+                'time_info': time_info
+            }
 
         # 如果是END标记且有当前POI，添加到列表中
-        elif '_END' in match.group(0) and current_poi:
-            arranged_pois.append(current_poi)
-            current_poi = None
+        arranged_pois.append(current_poi)
+        current_poi = None
 
     # 过滤掉location、id和city_code都为空的POI
     arranged_pois = [poi for poi in arranged_pois if not (poi['location'] == '' or poi['city_code'] == '')]
@@ -205,38 +199,43 @@ def get_arrange_route(poi_info_list, daily_plan_str):
 
 async def get_travel_plan(city: str, recommend_scene_str: str, start_time:str, end_time:str, poi_info_list:list) -> str:
     global r1, v3
-    prompt = f"""
-    用户已经在{city}，根据如下提供的景点信息，规划一个从{start_time}到{end_time}时间的行程。
-    包含餐饮和住宿，餐饮和住宿不用给出具体点，给出在什么位置进行餐饮和住宿即可。
-    包含详细的时间安排和餐饮酒店住宿。你需要考虑一下各个地点之间的路线、距离和时间
+    prompt = f"""# ** 任务说明 **
+    1. 请你根据用户所在{city}以及输入的候选景点信息，合理选择一些景点，按照要求，规划一个从{start_time}到{end_time}时间的行程
+    2. 行程要包含餐饮和住宿，餐饮和住宿不用给出具体点，给出在什么位置进行餐饮和住宿即可
+    3. 包含详细的时间安排和餐饮酒店住宿。你需要考虑一下各个地点之间的路线、距离和时间
 
     # ** 注意 **
     1.  输出采用markdown格式，每一天的行程安排都用分割线进行分割，第一天的输出前面也要加分割线
     2.  游玩的景区，需要加入 前后缀 [PX_START] 景点名称 [PX_END]，X是景点编号
     3.  早/中/晚吃饭的地方，需要加入 前后缀 [RESTAURANT_START] 餐馆名称描述 [RESTAURANT_END]
     4.  晚上住宿的地方，需要加入 前后缀 [HOTEL_START] 酒店名称描述 [HOTEL_END]
-    5.  餐馆名称和酒店名称的所有信息，请统一输出在 前后缀 内部
+    5.  景点、餐馆、酒店以及对应的时间等所有信息，请统一输出在 前后缀 内部
     6.  你每天的行程安排不要出现重复的景点
+    7.  在安排餐饮、酒店住宿的时候要餐馆和酒店的描述必须为"A附近的B"的格式，其中A为景点名称，B为餐馆类型或餐馆特色，例如"故宫附近的早餐店"、"天安门附近的烤鸭店"等
+    8.  在安排餐饮、住宿的时候，需要考虑吃饭和回酒店的时间是否合理，同时你在规划行程的时候也应该考虑路程耗费的时间
+    9.  在规划餐厅的时候，要考虑到地方特色，可以结合当地文化安排一些多样性的美食
 
     # ** 每天示程安排示例如下 **
+    ---
     ### 2025-03-24 星期一
 
     **上午：**
-    - [RESTAURANT_START] 08:00 - 09:00: 早餐 [RESTAURANT_END]
+    - [RESTAURANT_START] 08:00 - 09:00: 故宫附近的炒肝儿店 [RESTAURANT_END]
     - [P1_START] 09:00 - 13:00: 故宫博物院 [P1_END]
 
     **中午：**
-    - [RESTAURANT_START] 13:00 - 14:00: 午餐 [RESTAURANT_END]
+    - [RESTAURANT_START] 13:00 - 14:00: 天安门广场附近的烤鸭店 [RESTAURANT_END]
 
     **下午：**
     - [P2_START] 14:00 - 16:00: 天安门广场 [P2_END]
     - [P5_START] 16:30 - 18:00: 天坛公园 [P5_END]
 
     **晚上：**
-    - [RESTAURANT_START] 18:00 - 19:00: 晚餐 [RESTAURANT_END]
+    - [RESTAURANT_START] 18:00 - 19:00: 天坛公园附近的老北京涮肉 [RESTAURANT_END]
     - [HOTEL_START] 19:00: 东城区附近的酒店 [HOTEL_END]
 
-    """ + recommend_scene_str
+    候选景点信息如下:
+    """ + recommend_scene_str + "接下来请你根据上述信息，合理安排行程\n"
 
     sections = []
     async for section in call_llm("", prompt, v3):
