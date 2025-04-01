@@ -8,6 +8,7 @@ import time
 import numpy as np
 from sklearn.cluster import KMeans
 from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE, recomend_scence_str_mock, arrange_route_str_mock
+from function_definitions import functions
 
 from context_data import ContextData, DayPlan, POI, Route
 
@@ -616,121 +617,6 @@ async def main(city: str, start_time: str, end_time: str):
     print('poi_info_list: \n', poi_info_list)
 
     # Define functions for LLM function calling
-    functions = [
-        {
-            "name": "arrange",
-            "description": "Calculate initial POI order using OR-Tools",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "poi_list": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "name": {"type": "string"},
-                                "location": {"type": "string"},
-                                "city_code": {"type": "string"}
-                            },
-                            "required": ["id", "name", "location", "city_code"]
-                        },
-                        "description": "List of POIs to arrange"
-                    },
-                    "day": {
-                        "type": "integer",
-                        "description": "Number of days for arrangement"
-                    }
-                },
-                "required": ["poi_list", "day"]
-            }
-        },
-        {
-            "name": "adjust",
-            "description": "Adjust POI order based on user preferences or common sense",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "type": {
-                        "type": "string",
-                        "enum": ["del", "add", "swap", "rerank"],
-                        "description": "Type of adjustment"
-                    },
-                    "new_poi_list": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "name": {"type": "string"},
-                                "location": {"type": "string"},
-                                "city_code": {"type": "string"}
-                            },
-                            "required": ["id", "name", "location", "city_code"]
-                        },
-                        "description": "New POI list after adjustment"
-                    }
-                },
-                "required": ["type", "new_poi_list"]
-            }
-        },
-        {
-            "name": "search_for_poi",
-            "description": "Search for POIs like restaurants or hotels",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "keyword": {
-                        "type": "string",
-                        "description": "Search keyword"
-                    },
-                    "city_code": {
-                        "type": "string",
-                        "description": "City code for search"
-                    }
-                },
-                "required": ["keyword", "city_code"]
-            }
-        },
-        {
-            "name": "search_for_navi",
-            "description": "Search navigation routes for arranged POIs",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "poi_list": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "id": {"type": "string"},
-                                "name": {"type": "string"},
-                                "location": {"type": "string"},
-                                "city_code": {"type": "string"}
-                            },
-                            "required": ["id", "name", "location", "city_code"]
-                        },
-                        "description": "List of POIs for navigation"
-                    }
-                },
-                "required": ["poi_list"]
-            }
-        },
-        {
-            "name": "final_answer",
-            "description": "Finalize and return the travel plan",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "answer": {
-                        "type": "string",
-                        "description": "Final travel plan answer"
-                    }
-                },
-                "required": ["answer"]
-            }
-        }
-    ]
 
     # Call LLM with function calling
     response = client.chat.completions.create(
