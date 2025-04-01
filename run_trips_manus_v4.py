@@ -9,6 +9,8 @@ import numpy as np
 from sklearn.cluster import KMeans
 from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE, recomend_scence_str_mock, arrange_route_str_mock
 
+from context_data import ContextData, DayPlan, POI, Route
+
 '''
     大模型做自主规划
     1、
@@ -21,7 +23,8 @@ from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSO
 #v3 = "deepseek-ai/DeepSeek-V3"
 
 r1 = "deepseek-r1-250120"
-v3 = "deepseek-v3-241226"
+#v3 = "deepseek-v3-241226"
+v3 = "deepseek-v3-250324"
 
 async def call_llm(sys_prompt: str, query: str, request_model: str):  # 移除返回类型标注
     client = OpenAI(api_key="cb9729a7-aa90-459f-8315-4ae41a6132f3",
@@ -577,6 +580,31 @@ def _get_arrange_route(poi_info_list, daily_plan_str):
     # print('='*20)
     # arrange_route_str = json.dumps(arrange_route_v3, ensure_ascii=False)
     return arrange_route_v2
+
+def react_call_travel_plan(poi_info_list, cluster_result):
+    max_round = 10
+    round = 0
+
+    is_finish = False
+
+    while round < max_round and is_finish == False:
+        round += 1
+        print(f"Executing step {round}/{max_round}")
+
+        should_act, cot, tool_call_str = think_fun()
+
+        if not should_act:
+            print("Thinking complete - no action needed")
+            continue
+
+        observation = act_fun(tool_call_str)
+
+        print(f"Observation: {observation}")
+
+        if round == max_round:
+            print(f"Reached max steps ({max_round})")
+
+    return
 
 async def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
