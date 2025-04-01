@@ -10,7 +10,9 @@ import numpy as np
 from sklearn.cluster import KMeans
 from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE, recomend_scence_str_mock, arrange_route_str_mock
 from function_definitions import functions
+from prompt import system_prompt
 from context_data import ContextData, DayPlan, POI, Route
+from app.schema import Memory, Message
 
 '''
     大模型function call做自主规划
@@ -544,17 +546,35 @@ def check_search_again(arrange_route_v2):
     return cleaned_routes
 
 
-def react_call_travel_plan(poi_info_list, cluster_result):
+def get_sys_prompt(context_data):
+    sys_prompt = system_prompt.format(cluster_dict=context_data.tranform_clusters_to_markdown(),
+                                      poi_info=context_data.tranform_pois_to_markdown(),
+                                      cur_arrangement=context_data.tranform_plans_to_markdown()
+                                      )
+    return sys_prompt
+
+def react_call_travel_plan(poi_info_list, day):
     max_round = 10
     round = 0
 
+    # 对POI进行聚类
+    days = day * 2  # 可以根据实际需求调整聚类天数
+    clustered_pois = cluster_pois(poi_info_list, days)
+
+    context_data = ContextData(clustered_pois)
+
     is_finish = False
+
+    msgs = Memory()
+    sys_prompt = get_sys_prompt(context_data)
+    msgs.add_message(Message.system_message(content=sys_prompt))
+    msgs.add_message(Message.user_message(content=first_user_prompt))
 
     while round < max_round and is_finish == False:
         round += 1
         print(f"Executing step {round}/{max_round}")
 
-        should_act, cot, tool_call_str = think_fun()
+        should_act, cot, tool_call_str = think_fun(msgs)
 
         if not should_act:
             print("Thinking complete - no action needed")

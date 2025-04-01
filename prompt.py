@@ -64,10 +64,16 @@ system_prompt = """## 任务背景
 
 ## 已知信息
 
-1. cluster_dict = {cluster_dict}
-2. poi_info = {poi_info}
-3. cur_arrangement = {cur_arrangement}
-4. cur_route = {cur_route}
+1. cluster_dict
+{cluster_dict}
+2. poi_info
+{poi_info}
+3. cur_arrangement
+{cur_arrangement}
 
 接下来请你根据用户的指令，合理调用工具，按照要求完成任务
+"""
+
+first_user_prompt = """
+初始描述
 """

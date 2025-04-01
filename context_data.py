@@ -21,11 +21,12 @@ class POI(BaseModel):
     website: str
     opening_hours: str
     image: str
+    duration: float
     # 初始化函数
-    def __init__(self, id, name, address, opening_hours):
+    def __init__(self, id, name, opening_hours, duration):
         self.id = id
         self.name = name
-        self.address = address
+        self.duration = duration
         self.opening_hours = opening_hours
 
     # 转换为字典的函数
@@ -45,8 +46,8 @@ class Route(BaseModel):
     id: str
     start_time: str
     end_time: str
-    start_point: POI
-    end_point: POI
+    start_point: str
+    end_point: str
 
     # 初始化函数
     def __init__(self, start_point, end_point):
@@ -64,7 +65,7 @@ class DayPlan(BaseModel):
     """Represents a day plan."""
     start_time: str
     end_time: str
-    travel_list: List[POI]
+    travel_list: List[str]
     route: List[Route]
 
     # 初始化函数
@@ -86,16 +87,36 @@ class ContextData:
     hotels: dict = {}
     # {"R1": POI, "R2": POI...}
     restaurants: dict = {}
-    # {"C1": [POI, POI...], ...}
+    # {"C1": [P1, P2...], ...}
     clusters: dict = {}
-    # [{"start_time": "2021-01-01 00:00:00",
-    #   "travel_list" : [POI, POI...],
-    #   "route": [{"start_point": POI,
-    #              "end_point": POI},
-    #             ...]
+    # {"day1": {"start_time": "2021-01-01 00:00:00",
+    #           "travel_list" : [P1, P2...],
+    #           "route": [{"start_point": P1,
+    #                      "end_point": P2},
+    #                     ...]
     #   },
-    # {}...]
-    plans: List[DayPlan] = []
+    # {}...}
+    plans: dict = {}
+
+    def __init__(self, cluster_dict: Dict[int, List[Dict]]):
+        poi_idx_cnt = 1
+
+        for cluster_id, poi_list in cluster_dict.items():
+            self.clusters[cluster_id] = []
+
+            for poi in poi_list:
+                poi_amap_id = poi["id"]
+                poi_name = poi["name"]
+                poi_opening_hours = poi["opening_hours"]
+                poi_duration = poi["duration"]
+
+                curr_poi = POI(poi_idx_cnt, poi_name, poi_opening_hours, poi_duration)
+                poi_id = f"P{poi_idx_cnt}"
+
+                self.pois[poi_id] = curr_poi
+                self.clusters[cluster_id].append(poi_id)
+                poi_idx_cnt += 1
+
 
     arrange_ment: dict = {}
 
