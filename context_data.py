@@ -1,4 +1,5 @@
 import os
+from re import L
 import sys
 import time
 import json
@@ -95,6 +96,12 @@ class ContextData:
     #   },
     # {}...]
     plans: List[DayPlan] = []
+
+    arrange_ment: dict = {}
+
+    poi_index: int = 0
+    hotel_index: int = 0
+    restaurant_index: int = 0
 
     # 将 pois 转换为 markdown 的函数
     def tranform_pois_to_markdown(self):

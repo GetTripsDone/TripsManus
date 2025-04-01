@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+from numpy.lib import index_tricks
 from openai import OpenAI
 from typing import Dict, Optional, List
 import requests
@@ -9,15 +10,10 @@ import numpy as np
 from sklearn.cluster import KMeans
 from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE, recomend_scence_str_mock, arrange_route_str_mock
 from function_definitions import functions
-
 from context_data import ContextData, DayPlan, POI, Route
 
 '''
-    大模型做自主规划
-    1、
-    2、
-    3、
-    4、
+    大模型function call做自主规划
 '''
 
 #r1 = "deepseek-ai/DeepSeek-R1"
@@ -192,7 +188,15 @@ async def get_recommend(city: str, day: int):
     days = day  # 可以根据实际需求调整聚类天数
     clustered_pois = cluster_pois(poi_info_list, days)
 
-    return "\n".join(sections), clustered_pois
+    # 创建index2poi字典
+    index2poi = {}
+    for poi in poi_info_list:
+        if 'poi_index' in poi:
+            poi_copy = poi.copy()
+            del poi_copy['poi_index']
+            index2poi[poi['poi_index']] = poi_copy
+
+    return "\n".join(sections), clustered_pois, index2poi
 
 
 def get_arrange_route(poi_info_list, daily_plan_str):
@@ -539,48 +543,6 @@ def check_search_again(arrange_route_v2):
 
     return cleaned_routes
 
-def _get_arrange_route(poi_info_list, daily_plan_str):
-    '''
-        1、搜索daily_plan_str中存在，但是poi_info_list中不存在的景点
-        2、根据daily_plan_str的信息搜索每天的食宿
-        3、根据以上结果搜索路线
-    '''
-
-    daily_plan = json.loads(daily_plan_str)
-    # {day1: {routes: [{start, end, Transportation}, {start, end, Transportation}, ...]}, day2: {routes: [{start, end, Transportation}, {start, end, Transportation}, ...]}}
-    # 简化plan的格式
-    simplify_plan = {}
-    for day, value in daily_plan.items():
-        routes = value['routes']  # list
-        simplify_plan[day] = routes  # [{start, end, Transportation}, {start, end, Transportation}, ...]
-    # 使用PROMPT_COMBINE作为系统提示词，并代入实际参数
-    prompt = PROMPT_COMBINE.replace('{simplify_plan}', json.dumps(simplify_plan, ensure_ascii=False)).replace('{poi_info_list}', json.dumps(poi_info_list, ensure_ascii=False))
-    print('sty play the game')
-    # 调用r1模型生成路线安排结果
-    global v3
-    arrange_route_str = call_llm("", prompt, v3)
-    if "```json" in arrange_route_str and "```" in arrange_route_str:
-        arrange_route_str = arrange_route_str.split("```json")[1].split("```")[0]
-    print(f"prompt result arrange route {arrange_route_str}")
-
-    # print('='*20)
-    arrange_route_v1 = json.loads(arrange_route_str)
-    # arrange_route_v1 = json.loads(arrange_route_str_mock)  # mock数据
-    print(f"json result arrange route {arrange_route_v1}")
-    print('='*20)
-    # 重新搜索没搜到的点
-    arrange_route_v2 = search_again(arrange_route_v1)
-    arrange_route_v2 = check_search_again(arrange_route_v2)  # 校验格式
-    print(f"the final route with location {arrange_route_v2}")
-
-    # 搜路逻辑暂时不要
-    # print('='*20)
-    # # 搜路返回结果
-    # arrange_route_v3 = search_navi(arrange_route_v2)
-    # print(arrange_route_v3)
-    # print('='*20)
-    # arrange_route_str = json.dumps(arrange_route_v3, ensure_ascii=False)
-    return arrange_route_v2
 
 def react_call_travel_plan(poi_info_list, cluster_result):
     max_round = 10
@@ -612,9 +574,13 @@ async def main(city: str, start_time: str, end_time: str):
     # [SCENE_START] 黄山 [SCENE_END]
     # TDOO 推荐点 [P1_START] 邯郸博物馆 [P1_END]
     # 输出 P1 P2 P3的景点
+    my_data = ContextData
     day = 3
-    recommend_scene_str, poi_info_list = await get_recommend(city, day)
-    print('poi_info_list: \n', poi_info_list)
+    recommend_scene_str, clusters_dict, index2poi = await get_recommend(city, day)
+    print('clusters_dict: \n', clusters_dict)
+    print('index2poi: \n', index2poi)
+    my_data.clusters = clusters_dict
+    my_data.pois = index2poi
 
     # Define functions for LLM function calling
 
@@ -623,7 +589,7 @@ async def main(city: str, start_time: str, end_time: str):
         model="deepseek-v3-241226",
         messages=[
             {"role": "system", "content": "You are a travel planning assistant."},
-            {"role": "user", "content": json.dumps({"poi_list": poi_info_list, "day": day})},
+            {"role": "user", "content": json.dumps({"poi_list": clusters_dict, "day": day})},
         ],
         functions=functions,
         function_call="auto",
@@ -641,7 +607,7 @@ async def main(city: str, start_time: str, end_time: str):
                 poi_list = function_args["poi_list"]
                 day = function_args["day"]
                 # Call arrange function
-                arranged_pois = arrange(poi_list, day)
+                arranged_pois = arrange(poi_list, day, my_data)
 
             elif function_name == "adjust":
                 adjustment_type = function_args["type"]
