@@ -5,7 +5,7 @@ This module contains function definitions for the travel planning assistant.
 functions = [
     {
         "name": "arrange",
-        "description": "使用OR-Tools计算POI初始顺序，根据景点位置和游玩时间生成合理的每日行程安排。",
+        "description": "一个计算POI游玩先后顺序的工具，根据景点位置和游玩时间生成合理的每日行程安排。",
         "parameters": {
             "type": "object",
             "properties": {
@@ -14,18 +14,14 @@ functions = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "id": {"type": "string"},
-                            "name": {"type": "string"},
-                            "location": {"type": "string"},
-                            "city_code": {"type": "string"}
                         },
-                        "required": ["id", "name", "location", "city_code"]
+                        "required": []
                     },
-                    "description": "List of POIs to arrange"
+                    "description": "POI的index列表，[P1, P2, P3,...]，index不一定连续，是从某类簇中选出的POI子集"
                 },
                 "day": {
                     "type": "integer",
-                    "description": "Number of days for arrangement"
+                    "description": "第几天的安排"
                 }
             },
             "required": ["poi_list", "day"]
@@ -33,28 +29,24 @@ functions = [
     },
     {
         "name": "adjust",
-        "description": "根据用户偏好或常识调整POI顺序，支持删除、添加、交换或重新排序POI。",
+        "description": "根据用户query的偏好或常识调整arrange返回的POI顺序，支持删除、添加、交换或重新排序POI。",
         "parameters": {
             "type": "object",
             "properties": {
                 "type": {
                     "type": "string",
                     "enum": ["del", "add", "swap", "rerank"],
-                    "description": "Type of adjustment"
+                    "description": "如何调整POI顺序，del: 删除POI，add: 添加POI，swap: 交换POI位置，rerank: 重新调整POI顺序"
                 },
                 "new_poi_list": {
                     "type": "array",
                     "items": {
-                        "type": "object",
+                        "type": "string",
                         "properties": {
-                            "id": {"type": "string"},
-                            "name": {"type": "string"},
-                            "location": {"type": "string"},
-                            "city_code": {"type": "string"}
                         },
-                        "required": ["id", "name", "location", "city_code"]
+                        "required": []
                     },
-                    "description": "New POI list after adjustment"
+                    "description": "重新调整后的排好序的POI index列表"
                 }
             },
             "required": ["type", "new_poi_list"]
@@ -62,20 +54,25 @@ functions = [
     },
     {
         "name": "search_for_poi",
-        "description": "搜索餐厅、酒店等POI，根据关键词和城市代码返回匹配的景点信息。",
+        "description": "一个搜索景点附近酒店、餐厅的工具，根据关键词来搜索餐厅、酒店等POI",
         "parameters": {
             "type": "object",
             "properties": {
                 "keyword": {
                     "type": "string",
-                    "description": "Search keyword"
+                    "description": "搜索关键词，例如：'颐和园附近的烤鸭店'、'天坛附近的涮肉'"
                 },
                 "city_code": {
                     "type": "string",
-                    "description": "City code for search"
-                }
+                    "description": "你要搜索的点所在城市的的城市编码"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": ["hotel", "restaurant"],
+                    "description": "搜索的POI类型，hotel: 酒店，restaurant: 餐厅"
+                },
             },
-            "required": ["keyword", "city_code"]
+            "required": ["keyword", "city_code", "type"]
         }
     },
     {
@@ -89,14 +86,10 @@ functions = [
                     "items": {
                         "type": "object",
                         "properties": {
-                            "id": {"type": "string"},
-                            "name": {"type": "string"},
-                            "location": {"type": "string"},
-                            "city_code": {"type": "string"}
                         },
-                        "required": ["id", "name", "location", "city_code"]
+                        "required": []
                     },
-                    "description": "List of POIs for navigation"
+                    "description": "POI和hotel、restaurant的index列表，已经被排好序，[H1, R1, P1, P2, P3, R1, ...]，"
                 }
             },
             "required": ["poi_list"]
