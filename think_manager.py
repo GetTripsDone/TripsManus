@@ -24,7 +24,7 @@ async def think_func(sys_msg, msgs):
 
         final_functions.append(new_format)
 
-    logger.info(f"tool call messages is {json.dumps(json_dict, ensure_ascii=False)} tools {json.dumps(final_functions, ensure_ascii=False)}")
+    logger.info(f"tool call messages is {json.dumps(json_dict, ensure_ascii=False)} \n\n tools {json.dumps(final_functions, ensure_ascii=False)}")
 
     response = await llm_model.ask_tool(
         messages=msgs.messages,
