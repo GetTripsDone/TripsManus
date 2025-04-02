@@ -13,15 +13,21 @@ class POI(BaseModel):
     description: str = ""
     latitude: float = 0.0
     longitude: float = 0.0
+    location: str = ""
+    city_code: str = ""
     category: str = ""
-    rating: float = 0.0
+    rating: str = "4.5"
     price: float = 0.0
     address: str = ""
     phone: str = ""
     website: str = ""
     opening_hours: str
+    opentime: str = ""
+    open_time_seconds: float = 0.0
+    close_time_seconds: float = 0.0
     image: str = ""
-    duration: float
+    duration: float = 1.0
+    poi_index: str = ""
 
     def to_dict(self):
         return {
@@ -32,23 +38,34 @@ class POI(BaseModel):
             "duration": self.duration
         }
 
+    def to_poi_dict(self):
+        return {
+            'name': self.name,
+            'location': f"{self.longitude},{self.latitude}",
+            'id': self.id,
+            'citycode': self.city_code,
+            'opentime': self.opentime,
+            'rating': str(self.rating),
+            'duration': self.duration,
+            'open_time_seconds': self.open_time_seconds,
+            'close_time_seconds': self.close_time_seconds,
+            'poi_index': self.poi_index
+        }
+
     def to_json(self):
         return json.dumps(self.to_dict())
 
 class Route(BaseModel):
     """Represents a route."""
-    id: str
-    start_time: str
-    end_time: str
-    start_point: str
-    end_point: str
+    id: str = ""
+    start_time: str = ""
+    end_time: str = ""
+    start_point: POI
+    end_point: POI
 
-    # 初始化函数
-    def __init__(self, start_point, end_point):
-        self.start_point = start_point
-        self.end_point = end_point
+    class Config:
+        arbitrary_types_allowed = True
 
-    # 转换为字典的函数
     def to_dict(self):
         return {
             "start_point": self.start_point.to_dict(),
@@ -58,20 +75,17 @@ class Route(BaseModel):
 class DayPlan(BaseModel):
     """Represents a day plan."""
     start_time: str
-    end_time: str
-    travel_list: List[str]
-    route: List[Route]
+    end_time: str = ""
+    travel_list: List[str] = Field(default_factory=list)
+    route: List[Route] = Field(default_factory=list)
 
-    # 初始化函数
-    def __init__(self, start_time, travel_list):
-        self.start_time = start_time
-        self.travel_list = travel_list
+    class Config:
+        arbitrary_types_allowed = True
 
-    # 转换为字典的函数
     def to_dict(self):
         return {
             "start_time": self.start_time,
-            "travel_list": [poi.to_dict() for poi in self.travel_list]
+            "travel_list": [poi for poi in self.travel_list]
         }
 
 class ContextData:
@@ -94,31 +108,42 @@ class ContextData:
     plans: dict = {}
 
     def __init__(self, cluster_dict: Dict[int, List[Dict]]):
-        poi_idx_cnt = 1
 
         for cluster_id, poi_list in cluster_dict.items():
             self.clusters[cluster_id] = []
-
+            print('mtfk')
             for poi in poi_list:
-                poi_id = f"P{poi_idx_cnt}"
+                print(poi.get("location", ""))
+                location = poi.get("location", "")
+                poi_index = poi['poi_index']
+                longitude, latitude = location.split(",") if location else (0.0, 0.0)
                 curr_poi = POI(
-                    id=poi_id,
+                    id=poi["id"],
                     name=poi["name"],
+                    location=location,
+                    latitude=float(latitude),
+                    longitude=float(longitude),
+                    city_code=poi.get("city_code", ""),
                     opening_hours=poi["opentime"],
-                    duration=poi["duration"]
+                    opentime=poi["opentime"],
+                    open_time_seconds=poi.get("open_time_seconds", 0.0),
+                    close_time_seconds=poi.get("close_time_seconds", 0.0),
+                    rating=poi.get("rating", "4.5"),
+                    duration=float(poi["duration"]) if "duration" in poi else 1.0,
+                    poi_index=poi_index,
                 )
 
-                self.pois[poi_id] = curr_poi
-                self.clusters[cluster_id].append(poi_id)
-                poi_idx_cnt += 1
+                self.pois[poi_index] = curr_poi
+                self.clusters[cluster_id].append(poi_index)
+                self.poi_index_int += max(self.poi_index_int, int(poi_index[1: ]))
 
         return
 
     arrange_ment: dict = {}
 
-    poi_index: int = 0
-    hotel_index: int = 0
-    restaurant_index: int = 0
+    poi_index_int: int = 0
+    poi_index_int: int = 0
+    poi_index_int: int = 0
 
     # 将 pois 转换为 markdown 的函数
     def tranform_pois_to_markdown(self):
