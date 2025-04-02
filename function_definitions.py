@@ -94,9 +94,13 @@ functions = [
                         "required": []
                     },
                     "description": "POI和hotel、restaurant的index列表，已经被排好序，[H1, R1, P1, P2, P3, R1, ...]，"
+                },
+                "day": {
+                    "type": "integer",
+                    "description": "要为第几天的安排(poi_list)计算导航路线"
                 }
             },
-            "required": ["poi_list"]
+            "required": ["poi_list", "day"]
         }
     },
     {

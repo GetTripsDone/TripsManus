@@ -627,7 +627,8 @@ def act_fun(tool_call, my_data):
         return search_for_poi(keyword, city_code, poi_type, my_data)
     elif name == "search_for_navi":
         poi_list = args.get("poi_list", [])
-        return search_for_navi(poi_list, my_data)
+        day = args.get("day", 1)
+        return search_for_navi(day, poi_list, my_data)
     elif name == "final_answer":
         return final_answer(my_data)
     else:

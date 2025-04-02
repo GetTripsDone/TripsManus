@@ -260,7 +260,7 @@ def execute_navi(
         response = requests.get(url, params=params)
         time.sleep(1)
         result = response.json()
-        print('result: ', result)
+        # print('result: ', result)
         if result.get("status") == "1":
             if result['route']['transits'] != []:
                 distance = result['route']['transits'][0]['distance']
@@ -268,7 +268,7 @@ def execute_navi(
                     duration = result['route']['transits'][0]['cost']['duration']
                 else:
                     # 假设步行速度为1.2米/秒，将距离(米)转换为分钟
-                    print('distance: ', distance)
+                    # print('distance: ', distance)
                     duration = float(distance) / (1.2 * 60)
             else:
                 distance = result['route']['distance']
