@@ -117,6 +117,7 @@ class ContextData:
                 self.clusters[cluster_id].append(poi_id)
                 poi_idx_cnt += 1
 
+        return
 
     arrange_ment: dict = {}
 
@@ -129,9 +130,11 @@ class ContextData:
         """Transform pois to markdown."""
         markdown = ""
         for idx, (poi_id, poi) in enumerate(self.pois.items(), 1):
-            markdown += f"### P{poi_id}. {poi.name}\n"
+            markdown += f"### {poi_id}. {poi.name}\n"
             markdown += f"**地址：**{poi.address}\n"
             markdown += f"**开放时间：**{poi.opening_hours}\n"
+            # 游玩时长
+            markdown += f"**游玩时长：**{poi.duration}小时\n"
             markdown += "---\n"  # 添加分隔线
 
         return markdown
@@ -141,7 +144,7 @@ class ContextData:
         """Transform hotels to markdown."""
         markdown = ""
         for idx, (hotel_id, hotel) in enumerate(self.hotels.items(), 1):
-            markdown += f"### H{hotel_id}. {hotel.name}\n"
+            markdown += f"### {hotel_id}. {hotel.name}\n"
             markdown += f"**地址：**{hotel.address}\n"
             markdown += f"**开放时间：**{hotel.opening_hours}\n"
             markdown += "---\n"  # 添加分隔线
@@ -152,7 +155,7 @@ class ContextData:
         """Transform restaurants to markdown."""
         markdown = ""
         for idx, (restaurant_id, restaurant) in enumerate(self.restaurants.items(), 1):
-            markdown += f"### R{restaurant_id}. {restaurant.name}\n"
+            markdown += f"### {restaurant_id}. {restaurant.name}\n"
             markdown += f"**地址：**{restaurant.address}\n"
             markdown += f"**开放时间：**{restaurant.opening_hours}\n"
             markdown += "---\n"  # 添加分隔线
@@ -165,9 +168,9 @@ class ContextData:
 
         # cluster 是一个poi列表，需要把他们的id打印成一行
         for idx, (cluster_id, cluster) in enumerate(self.clusters.items(), 1):
-            markdown += f"### C{cluster_id}.\n"
+            markdown += f"### ** 地点聚类 ** C{cluster_id}.\n"
             for poi in cluster:
-                markdown += f"{poi.id} "
+                markdown += f"{poi} "
             markdown += "\n"
             markdown += "---\n"  # 添加分隔线
 
@@ -178,17 +181,18 @@ class ContextData:
         """Transform plans to markdown."""
         markdown = ""
         # plan是一个数据结构
-        for idx, plan in enumerate(self.plans, 1):
+        for idx, plan in enumerate(self.plans.items()):
             markdown += f"### Day {idx}\n"
             markdown += f"**今天出发时间：**{plan.start_time}\n"
             markdown += "**依次要经过的POI点：**\n"
             for poi in plan.travel_list:
-                markdown += f"- ID:{poi.id}, 名称:{poi.name}\n"
+                markdown += f"- ID:{poi}\n"
             markdown += "**路线：**\n"
             for route in plan.route:
-                markdown += f"- 从{route.start_point.name}到{route.end_point.name}\n"
+                markdown += f"- 从{route.start_point}到{route.end_point}\n"
 
             markdown += "---\n"  # 添加分隔线
+
         return markdown
 
 

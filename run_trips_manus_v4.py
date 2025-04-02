@@ -553,7 +553,15 @@ def get_sys_prompt(context_data):
                                       )
     return sys_prompt
 
-def react_call_travel_plan(poi_info_list, day):
+def think_func(msgs):
+    should_act = False
+    cot = ""
+    tool_call_str = ""
+
+
+    return should_act, cot, tool_call_str
+
+def react_call_travel_plan(poi_info_list, day, city, start_time, end_time):
     max_round = 10
     round = 0
 
@@ -568,13 +576,13 @@ def react_call_travel_plan(poi_info_list, day):
     msgs = Memory()
     sys_prompt = get_sys_prompt(context_data)
     msgs.add_message(Message.system_message(content=sys_prompt))
-    msgs.add_message(Message.user_message(content=first_user_prompt))
+    msgs.add_message(Message.user_message(content=first_user_prompt.format(city=city, start_time=start_time, end_time=end_time)))
 
     while round < max_round and is_finish == False:
         round += 1
         print(f"Executing step {round}/{max_round}")
 
-        should_act, cot, tool_call_str = think_fun(msgs)
+        should_act, cot, tool_call_str = think_func(msgs)
 
         if not should_act:
             print("Thinking complete - no action needed")
