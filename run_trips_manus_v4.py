@@ -146,7 +146,7 @@ def cluster_pois(poi_infos: List[Dict], n_clusters: int = 3) -> Dict[int, List[D
 async def get_recommend(city: str, day: int):
     global v3
     prompt = f"""
-    推荐{city}值得一去的景点，来6个
+    推荐{city}值得一去的景点，尽可能多的
 
     输入格式：markdown
     景点名称按照顺序进行标号：[PX_START] 景点名称 [PX_END]，X是景点编号
@@ -188,7 +188,7 @@ async def get_recommend(city: str, day: int):
         print(f"收到新的POI检索信息:\n{poi_info}\n")
 
     # 对POI进行聚类
-    days = day * 2  # 可以根据实际需求调整聚类天数
+    days = day  # 可以根据实际需求调整聚类天数
     clustered_pois = cluster_pois(poi_info_list, days)
 
     # 创建index2poi字典
