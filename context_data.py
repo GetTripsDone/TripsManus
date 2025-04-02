@@ -23,8 +23,8 @@ class POI(BaseModel):
     website: str = ""
     opening_hours: str
     opentime: str = ""
-    open_time_seconds: float = 0.0
-    close_time_seconds: float = 0.0
+    open_time_seconds: int = 0
+    close_time_seconds: int = 0
     image: str = ""
     duration: float = 1.0
     poi_index: str = ""
@@ -126,8 +126,8 @@ class ContextData:
                     city_code=poi.get("city_code", ""),
                     opening_hours=poi["opentime"],
                     opentime=poi["opentime"],
-                    open_time_seconds=poi.get("open_time_seconds", 0.0),
-                    close_time_seconds=poi.get("close_time_seconds", 0.0),
+                    open_time_seconds=poi.get("open_time_seconds", 0),
+                    close_time_seconds=poi.get("close_time_seconds", 0),
                     rating=poi.get("rating", "4.5"),
                     duration=float(poi["duration"]) if "duration" in poi else 1.0,
                     poi_index=poi_index,
@@ -142,8 +142,8 @@ class ContextData:
     arrange_ment: dict = {}
 
     poi_index_int: int = 0
-    poi_index_int: int = 0
-    poi_index_int: int = 0
+    restaurant_index_int: int = 0
+    hotel_index_int: int = 0
 
     # 将 pois 转换为 markdown 的函数
     def tranform_pois_to_markdown(self):
