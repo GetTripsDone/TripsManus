@@ -7,7 +7,10 @@ def arrange(poi_list, day, my_data):
     计算景点的初始游玩顺序，根据位置和游玩时间生成每日行程。
     返回markdown格式的字符串
     """
-    optimized_pois = optimize_daily_route(poi_list)
+    # 根据poi_list中的id获取POI对象
+    poi_objects = [get_poi_by_id(my_data, poi_id) for poi_id in poi_list]
+
+    optimized_pois = optimize_daily_route(poi_objects)
     if day not in my_data.plans:
         my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[])
     my_data.plans[day].travel_list = [poi["id"] for poi in optimized_pois]
