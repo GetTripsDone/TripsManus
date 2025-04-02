@@ -47,7 +47,7 @@ def adjust(new_poi_list, day, my_data):
     返回markdown格式的字符串
     """
     if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[], route=[])
+        my_data.plans[day] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
     my_data.plans[day].travel_list = new_poi_list
 
     # 转换为markdown格式
@@ -67,8 +67,8 @@ def search_for_poi(keyword, city_code, poi_type, my_data):
     """
     res = parse_res(execute(keyword, city_code))
     if poi_type == "hotel":
-        cur_index = 'H' + str(my_data.hotel_index)
-        my_data.hotel_index += 1
+        cur_index = 'H' + str(my_data.hotel_index_int)
+        my_data.hotel_index_int += 1
         res["poi_index"] = cur_index
         my_data.hotels[cur_index] = POI(
             id=res.get('id', ''),
@@ -77,8 +77,8 @@ def search_for_poi(keyword, city_code, poi_type, my_data):
             duration=res.get('duration', 0)
         )
     else:
-        cur_index = 'R' + str(my_data.restaurant_index)
-        my_data.restaurant_index += 1
+        cur_index = 'R' + str(my_data.restaurant_index_int)
+        my_data.restaurant_index_int += 1
         res["poi_index"] = cur_index
         my_data.restaurants[cur_index] = POI(
             id=res.get('id', ''),
@@ -145,6 +145,10 @@ def search_for_navi(poi_list, my_data):
 
         if navi_result:
             duration, distance = navi_result
+            # 确保duration和distance是数值类型
+            duration = float(duration) if isinstance(duration, str) else duration
+            distance = float(distance) if isinstance(distance, str) else distance
+
             routes.append({
                 'start_point': start_poi_id,
                 'end_point': end_poi_id,
@@ -153,8 +157,8 @@ def search_for_navi(poi_list, my_data):
             })
 
             markdown += f"**从 {start_poi.name} 到 {end_poi.name}**\n"
-            markdown += f"- 预计时间: {duration}分钟\n"
-            markdown += f"- 距离: {distance}公里\n\n"
+            markdown += f"- 预计时间: {duration/60:.1f}分钟\n"
+            markdown += f"- 距离: {distance/1000:.1f}公里\n\n"
 
     # Save routes to day plan
     day = len(my_data.plans)  # Assuming current day is next in sequence
