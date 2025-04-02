@@ -70,10 +70,9 @@ system_prompt = """## 任务背景
 {poi_info}
 3. cur_arrangement
 {cur_arrangement}
-
 接下来请你根据用户的指令，合理调用工具，按照要求完成任务
 """
 
 first_user_prompt = """
-初始描述
+请你根据用户所在{city}以及输入的候选景点信息，合理选择一些景点，按照要求，规划一个从{start_time}到{end_time}时间的行程
 """
