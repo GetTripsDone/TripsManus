@@ -7,12 +7,17 @@ def arrange(poi_list, day, my_data):
     计算景点的初始游玩顺序，根据位置和游玩时间生成每日行程。
     返回markdown格式的字符串
     """
-    # 根据poi_list中的id获取POI对象
-    poi_objects = [get_poi_by_id(my_data, poi_id) for poi_id in poi_list]
+
+    # Get full POI objects from index list
+    poi_objects = []
+    for poi_id in poi_list:
+        poi = get_poi_by_id(my_data, poi_id)
+        if poi:
+            poi_objects.append(poi.to_poi_dict())
 
     optimized_pois = optimize_daily_route(poi_objects)
     if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[])
+        my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[], route=[])
     my_data.plans[day].travel_list = [poi["id"] for poi in optimized_pois]
 
     # 转换为markdown格式
@@ -30,7 +35,7 @@ def adjust(new_poi_list, day, my_data):
     返回markdown格式的字符串
     """
     if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[])
+        my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[], route=[])
     my_data.plans[day].travel_list = new_poi_list
 
     # 转换为markdown格式
@@ -148,7 +153,7 @@ def search_for_navi(poi_list, my_data):
         start_poi = get_poi_by_id(my_data, route['start_point'])
         end_poi = get_poi_by_id(my_data, route['end_point'])
         if start_poi and end_poi:
-            route_objects.append(Route(start_poi, end_poi))
+            route_objects.append(Route(start_point=start_poi, end_point=end_poi))
 
     # Initialize or update day plan
     if day not in my_data.plans:

@@ -56,8 +56,8 @@ def calculate_travel_time_matrix(pois: List[Dict]) -> np.ndarray:
     n = len(pois)
     matrix = np.zeros((n, n))
     for i in range(n):
-        print(f"calculate_travel_time_matrix poi info\n{pois[i]}")
-
+        print(pois[i])
+        print(type(pois[i]))
         loc1 = np.array(list(map(float, pois[i]['location'].split(','))))
         for j in range(n):
             if i != j:
