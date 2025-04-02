@@ -85,21 +85,43 @@ def search_for_poi(keyword, city_code, poi_type, my_data):
         cur_index = 'H' + str(my_data.hotel_index_int)
         my_data.hotel_index_int += 1
         res["poi_index"] = cur_index
+        location = res.get('location', '')
+        longitude, latitude = location.split(',') if location else (0.0, 0.0)
         my_data.hotels[cur_index] = POI(
             id=res.get('id', ''),
             name=res.get('name', ''),
+            location=location,
+            latitude=float(latitude),
+            longitude=float(longitude),
+            city_code=res.get('city_code', ''),
             opening_hours=res.get('opening_hours', ''),
-            duration=res.get('duration', 0)
+            opentime=res.get('opening_hours', ''),
+            open_time_seconds=res.get('open_time_seconds', 0),
+            close_time_seconds=res.get('close_time_seconds', 0),
+            rating=res.get('rating', '4.5'),
+            duration=float(res.get('duration', 1.0)),
+            poi_index=cur_index
         )
     else:
         cur_index = 'R' + str(my_data.restaurant_index_int)
         my_data.restaurant_index_int += 1
         res["poi_index"] = cur_index
+        location = res.get('location', '')
+        longitude, latitude = location.split(',') if location else (0.0, 0.0)
         my_data.restaurants[cur_index] = POI(
             id=res.get('id', ''),
             name=res.get('name', ''),
+            location=location,
+            latitude=float(latitude),
+            longitude=float(longitude),
+            city_code=res.get('city_code', ''),
             opening_hours=res.get('opening_hours', ''),
-            duration=res.get('duration', 0)
+            opentime=res.get('opening_hours', ''),
+            open_time_seconds=res.get('open_time_seconds', 0),
+            close_time_seconds=res.get('close_time_seconds', 0),
+            rating=res.get('rating', '4.5'),
+            duration=float(res.get('duration', 1.0)),
+            poi_index=cur_index
         )
 
     '''
@@ -126,7 +148,7 @@ def get_poi_by_id(my_data, poi_id):
     )
 
 
-def search_for_navi(poi_list, my_data):
+def search_for_navi(day, poi_list, my_data):
     """
     为已安排的景点提供最佳路径和交通方式，并计算路程所需时间。
     获取city_code和poi_name需要根据pois的info来解析获取，因为poi_list中只有poi的index
@@ -138,16 +160,20 @@ def search_for_navi(poi_list, my_data):
         return "### 导航信息\n**提示:** 至少需要2个景点才能计算路线\n"
 
     markdown = "### 景点间导航信息\n"
-
+    # print('poi_list: ', poi_list)
     for i in range(len(poi_list) - 1):
+        # print(f"当前遍历到了第{i}个点")
         start_poi_id = poi_list[i]
         end_poi_id = poi_list[i+1]
 
         # Get POI from appropriate dictionary based on prefix
         start_poi = get_poi_by_id(my_data, start_poi_id)
+        # print('start_poi: ', start_poi)
         end_poi = get_poi_by_id(my_data, end_poi_id)
+        # print('end_poi: ', end_poi)
 
         if not start_poi or not end_poi:
+            print(f"Error: Invalid POI ID in poi_list: {start_poi_id} or {end_poi_id}")
             continue
 
         # Get location info from POIs
@@ -161,7 +187,7 @@ def search_for_navi(poi_list, my_data):
             city1=start_poi.city_code,
             city2=end_poi.city_code
         )
-
+        print('navi_result: ', navi_result)
         if navi_result:
             duration, distance = navi_result
             # 确保duration和distance是数值类型
@@ -180,7 +206,8 @@ def search_for_navi(poi_list, my_data):
             markdown += f"- 距离: {distance/1000:.1f}公里\n\n"
 
     # Save routes to day plan
-    day = len(my_data.plans)  # Assuming current day is next in sequence
+    if not day:
+        day = len(my_data.plans)  # Assuming current day is next in sequence
 
     # Convert routes to Route objects
     route_objects = []
