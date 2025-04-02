@@ -4,6 +4,7 @@ from app.llm import LLM
 from app.logger import logger
 from app.schema import Message
 from function_definitions import functions
+import json
 
 llm_model = LLM(config_name="tool_call_llm")
 

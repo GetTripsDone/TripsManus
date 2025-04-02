@@ -13,6 +13,7 @@ from prompt import system_prompt
 from context_data import ContextData, DayPlan, POI, Route
 from app.schema import Memory, Message
 from think_manager import think_func
+from tools_run import arrange, adjust, search_for_poi, search_for_navi, final_answer
 
 '''
     大模型function call做自主规划
@@ -576,9 +577,16 @@ async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
             print("Thinking complete - no action needed")
             continue
 
-        observation = act_fun(tool_call)
-
+        observation = act_fun(tool_call, context_data)
         print(f"Observation: {observation}")
+        # 创建工具消息并添加到消息历史
+        for call in tool_call:
+            tool_msg = Message.tool_message(
+                content=observation,
+                name=call.function.name,
+                tool_call_id=call.id
+            )
+            msgs.add_message(tool_msg)
 
         if round == max_round:
             print(f"Reached max steps ({max_round})")
@@ -589,8 +597,38 @@ async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
                 print("Final answer found")
                 is_finish = True
                 break
-
     return
+
+
+def act_fun(tool_call, my_data):
+    if not tool_call or not tool_call[0].function or not tool_call[0].function.name:
+        return "Error: Invalid tool call format"
+
+    name = tool_call[0].function.name
+    args = json.loads(tool_call[0].function.arguments or "{}")
+
+    # 根据不同的function name调用对应的工具函数
+    if name == "arrange":
+        poi_list = args.get("poi_list", [])
+        day = args.get("day", 1)
+        return arrange(poi_list, day, my_data)
+    elif name == "adjust":
+        new_poi_list = args.get("new_poi_list", [])
+        day = args.get("day", 1)
+        return adjust(new_poi_list, day, my_data)
+    elif name == "search_for_poi":
+        keyword = args.get("keyword", "")
+        city_code = args.get("city_code", "")
+        poi_type = args.get("poi_type", "")
+        return search_for_poi(keyword, city_code, poi_type, my_data)
+    elif name == "search_for_navi":
+        poi_list = args.get("poi_list", [])
+        return search_for_navi(poi_list, my_data)
+    elif name == "final_answer":
+        return final_answer(my_data)
+    else:
+        return f"Error: Unknown function '{name}'"
+
 
 async def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
