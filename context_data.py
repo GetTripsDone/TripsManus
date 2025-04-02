@@ -129,6 +129,9 @@ class ContextData:
     def tranform_pois_to_markdown(self):
         """Transform pois to markdown."""
         markdown = ""
+        if len(self.pois) == 0:
+            return "### 注意 ###\n -当前暂时未收集到景点POI信息\n\n"
+
         for idx, (poi_id, poi) in enumerate(self.pois.items(), 1):
             markdown += f"### {poi_id}. {poi.name}\n"
             markdown += f"**地址：**{poi.address}\n"
@@ -143,6 +146,9 @@ class ContextData:
     def tranform_hotels_to_markdown(self):
         """Transform hotels to markdown."""
         markdown = ""
+        if len(self.hotels) == 0:
+            return "### 注意 ###\n -当前暂时未收集到酒店POI信息\n\n"
+
         for idx, (hotel_id, hotel) in enumerate(self.hotels.items(), 1):
             markdown += f"### {hotel_id}. {hotel.name}\n"
             markdown += f"**地址：**{hotel.address}\n"
@@ -154,11 +160,23 @@ class ContextData:
     def tranform_restaurants_to_markdown(self):
         """Transform restaurants to markdown."""
         markdown = ""
+        if len(self.restaurants) == 0:
+            return "### 注意 ###\n -当前暂时未收集到餐厅POI信息\n\n"
+
         for idx, (restaurant_id, restaurant) in enumerate(self.restaurants.items(), 1):
             markdown += f"### {restaurant_id}. {restaurant.name}\n"
             markdown += f"**地址：**{restaurant.address}\n"
             markdown += f"**开放时间：**{restaurant.opening_hours}\n"
             markdown += "---\n"  # 添加分隔线
+        return markdown
+
+    def tranform_to_markdown(self):
+        """Transform to markdown."""
+        markdown = ""
+        markdown += self.tranform_pois_to_markdown()
+        markdown += self.tranform_hotels_to_markdown()
+        markdown += self.tranform_restaurants_to_markdown()
+
         return markdown
 
     # 将 clusters 转换为 markdown 的函数
@@ -180,6 +198,9 @@ class ContextData:
     def tranform_plans_to_markdown(self):
         """Transform plans to markdown."""
         markdown = ""
+        if len(self.plans) == 0:
+            return "### 注意 ###\n -当前暂时未收集到行程信息\n\n"
+
         # plan是一个数据结构
         for idx, plan in enumerate(self.plans.items()):
             markdown += f"### Day {idx}\n"

@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-from numpy.lib import index_tricks
 from openai import OpenAI
 from typing import Dict, Optional, List
 import requests
@@ -13,6 +12,7 @@ from function_definitions import functions
 from prompt import system_prompt
 from context_data import ContextData, DayPlan, POI, Route
 from app.schema import Memory, Message
+from think_manager import think_func
 
 '''
     大模型function call做自主规划
@@ -187,7 +187,7 @@ async def get_recommend(city: str, day: int):
         print(f"收到新的POI检索信息:\n{poi_info}\n")
 
     # 对POI进行聚类
-    days = day  # 可以根据实际需求调整聚类天数
+    days = day * 2  # 可以根据实际需求调整聚类天数
     clustered_pois = cluster_pois(poi_info_list, days)
 
     # 创建index2poi字典
@@ -548,26 +548,14 @@ def check_search_again(arrange_route_v2):
 
 def get_sys_prompt(context_data):
     sys_prompt = system_prompt.format(cluster_dict=context_data.tranform_clusters_to_markdown(),
-                                      poi_info=context_data.tranform_pois_to_markdown(),
+                                      poi_info=context_data.tranform_to_markdown(),
                                       cur_arrangement=context_data.tranform_plans_to_markdown()
                                       )
     return sys_prompt
 
-def think_func(msgs):
-    should_act = False
-    cot = ""
-    tool_call_str = ""
-
-
-    return should_act, cot, tool_call_str
-
-def react_call_travel_plan(poi_info_list, day, city, start_time, end_time):
+async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
     max_round = 10
     round = 0
-
-    # 对POI进行聚类
-    days = day * 2  # 可以根据实际需求调整聚类天数
-    clustered_pois = cluster_pois(poi_info_list, days)
 
     context_data = ContextData(clustered_pois)
 
@@ -582,18 +570,25 @@ def react_call_travel_plan(poi_info_list, day, city, start_time, end_time):
         round += 1
         print(f"Executing step {round}/{max_round}")
 
-        should_act, cot, tool_call_str = think_func(msgs)
+        should_act, cot, tool_call = await think_func(msgs)
 
         if not should_act:
             print("Thinking complete - no action needed")
             continue
 
-        observation = act_fun(tool_call_str)
+        observation = act_fun(tool_call)
 
         print(f"Observation: {observation}")
 
         if round == max_round:
             print(f"Reached max steps ({max_round})")
+
+        # 遍历 toolcall 如果包含 final_answer 就终止
+        for tool_call in tool_call:
+            if tool_call.function.name == "final_answer":
+                print("Final answer found")
+                is_finish = True
+                break
 
     return
 
@@ -602,83 +597,16 @@ async def main(city: str, start_time: str, end_time: str):
     # [SCENE_START] 黄山 [SCENE_END]
     # TDOO 推荐点 [P1_START] 邯郸博物馆 [P1_END]
     # 输出 P1 P2 P3的景点
-    my_data = ContextData
-    day = 3
+    # 计算旅行天数
+    from datetime import datetime
+    start_date = datetime.strptime(start_time, "%Y-%m-%d")
+    end_date = datetime.strptime(end_time, "%Y-%m-%d")
+    day = (end_date - start_date).days + 1  # 包含起始日期
+    print(f"旅行天数: {day}")
+
     recommend_scene_str, clusters_dict, index2poi = await get_recommend(city, day)
-    print('clusters_dict: \n', clusters_dict)
-    print('index2poi: \n', index2poi)
-    my_data.clusters = clusters_dict
-    my_data.pois = index2poi
 
-    # Define functions for LLM function calling
-
-    # Call LLM with function calling
-    response = client.chat.completions.create(
-        model="deepseek-v3-241226",
-        messages=[
-            {"role": "system", "content": "You are a travel planning assistant."},
-            {"role": "user", "content": json.dumps({"poi_list": clusters_dict, "day": day})},
-        ],
-        functions=functions,
-        function_call="auto",
-        temperature=0.0,
-    )
-
-    # Process function calls
-    while True:
-        message = response.choices[0].message
-        if message.function_call:
-            function_name = message.function_call.name
-            function_args = json.loads(message.function_call.arguments)
-
-            if function_name == "arrange":
-                poi_list = function_args["poi_list"]
-                day = function_args["day"]
-                # Call arrange function
-                arranged_pois = arrange(poi_list, day, my_data)
-
-            elif function_name == "adjust":
-                adjustment_type = function_args["type"]
-                new_poi_list = function_args["new_poi_list"]
-                # Call adjust function
-                adjusted_pois = adjust(adjustment_type, new_poi_list)
-
-            elif function_name == "search_for_poi":
-                keyword = function_args["keyword"]
-                city_code = function_args["city_code"]
-                # Call search_for_poi function
-                search_results = search_for_poi(keyword, city_code)
-
-            elif function_name == "search_for_navi":
-                poi_list = function_args["poi_list"]
-                # Call search_for_navi function
-                navi_results = search_for_navi(poi_list)
-
-            elif function_name == "final_answer":
-                answer = function_args["answer"]
-                # Return final answer
-                return answer
-
-            # Continue conversation with function results
-            response = client.chat.completions.create(
-                model="deepseek-v3-241226",
-                messages=[
-                    {"role": "system", "content": "You are a travel planning assistant."},
-                    {"role": "user", "content": json.dumps({"poi_list": poi_info_list, "day": day})},
-                    message,
-                    {
-                        "role": "function",
-                        "name": function_name,
-                        "content": json.dumps({"result": locals()[f"{function_name}_results"] if function_name != "final_answer" else None}),
-                    },
-                ],
-                functions=functions,
-                function_call="auto",
-                temperature=0.0,
-            )
-        else:
-            break
-
+    await react_call_travel_plan(clusters_dict, city, start_time, end_time)
 
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿
