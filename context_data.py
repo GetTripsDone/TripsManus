@@ -10,34 +10,28 @@ class POI(BaseModel):
     """Represents a point of interest."""
     id: str
     name: str
-    description: str
-    latitude: float
-    longitude: float
-    category: str
-    rating: float
-    price: float
-    address: str
-    phone: str
-    website: str
+    description: str = ""
+    latitude: float = 0.0
+    longitude: float = 0.0
+    category: str = ""
+    rating: float = 0.0
+    price: float = 0.0
+    address: str = ""
+    phone: str = ""
+    website: str = ""
     opening_hours: str
-    image: str
+    image: str = ""
     duration: float
-    # 初始化函数
-    def __init__(self, id, name, opening_hours, duration):
-        self.id = id
-        self.name = name
-        self.duration = duration
-        self.opening_hours = opening_hours
 
-    # 转换为字典的函数
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "address": self.address,
-            "opening_hours": self.opening_hours
+            "opening_hours": self.opening_hours,
+            "duration": self.duration
         }
-    # 转换为JSON字符串的函数
+
     def to_json(self):
         return json.dumps(self.to_dict())
 
@@ -106,13 +100,13 @@ class ContextData:
             self.clusters[cluster_id] = []
 
             for poi in poi_list:
-                poi_amap_id = poi["id"]
-                poi_name = poi["name"]
-                poi_opening_hours = poi["opening_hours"]
-                poi_duration = poi["duration"]
-
-                curr_poi = POI(poi_idx_cnt, poi_name, poi_opening_hours, poi_duration)
                 poi_id = f"P{poi_idx_cnt}"
+                curr_poi = POI(
+                    id=poi_id,
+                    name=poi["name"],
+                    opening_hours=poi["opentime"],
+                    duration=poi["duration"]
+                )
 
                 self.pois[poi_id] = curr_poi
                 self.clusters[cluster_id].append(poi_id)

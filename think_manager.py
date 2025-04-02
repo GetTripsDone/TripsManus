@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from app.llm import LLM
 from app.logger import logger
 from app.schema import Message
@@ -8,26 +9,28 @@ import json
 
 llm_model = LLM(config_name="tool_call_llm")
 
-async def think_func(msgs):
+async def think_func(sys_msg, msgs):
     should_act = False
     tool_calls = []
 
-    json_dict = []
-    for item in self.messages:
-        json_dict.append(item.to_dict())
+    json_dict = msgs.to_dict_list()
 
-    logger.info(f"tool call messages is {json_dict} tools {json.dumps(functions, ensure_ascii=False)}")
+    final_functions = []
+    for item in functions:
+        new_format = {
+            "type": "function",
+            "function": item,
+        }
 
-    try:
-        response = await llm_model.ask_tool(
-            messages=msgs[1:],
-            system_msgs=msgs[0],
-            tools=functions,
-        )
-    except ValueError:
-        raise
-    except Exception as e:
-        logger.error(f"🚨 Oops! The tool call's thinking process hit a snag: {e}")
+        final_functions.append(new_format)
+
+    logger.info(f"tool call messages is {json.dumps(json_dict, ensure_ascii=False)} tools {json.dumps(final_functions, ensure_ascii=False)}")
+
+    response = await llm_model.ask_tool(
+        messages=msgs.messages,
+        system_msgs=[sys_msg],
+        tools=final_functions,
+    )
 
     logger.info(f"tool call response is {response}")
 

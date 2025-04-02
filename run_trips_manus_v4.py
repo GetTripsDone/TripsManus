@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from local_prompt import Daily_Plan_SysPrompt, Daily_Plan_UserPrompt, PROMPT_JSON, mock_input_text, PROMPT_COMBINE, recomend_scence_str_mock, arrange_route_str_mock
 from function_definitions import functions
-from prompt import system_prompt
+from prompt import system_prompt, first_user_prompt
 from context_data import ContextData, DayPlan, POI, Route
 from app.schema import Memory, Message
 from think_manager import think_func
@@ -146,7 +146,7 @@ def cluster_pois(poi_infos: List[Dict], n_clusters: int = 3) -> Dict[int, List[D
 async def get_recommend(city: str, day: int):
     global v3
     prompt = f"""
-    推荐{city}值得一去的景点，尽可能多一些
+    推荐{city}值得一去的景点，来6个
 
     输入格式：markdown
     景点名称按照顺序进行标号：[PX_START] 景点名称 [PX_END]，X是景点编号
@@ -564,14 +564,16 @@ async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
 
     msgs = Memory()
     sys_prompt = get_sys_prompt(context_data)
-    msgs.add_message(Message.system_message(content=sys_prompt))
+    print(f"system prompt: {sys_prompt}")
+
+    sys_msg = Message.system_message(content=sys_prompt)
     msgs.add_message(Message.user_message(content=first_user_prompt.format(city=city, start_time=start_time, end_time=end_time)))
 
     while round < max_round and is_finish == False:
         round += 1
         print(f"Executing step {round}/{max_round}")
 
-        should_act, cot, tool_call = await think_func(msgs)
+        should_act, cot, tool_call = await think_func(sys_msg, msgs)
 
         if not should_act:
             print("Thinking complete - no action needed")
