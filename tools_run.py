@@ -17,14 +17,26 @@ def arrange(poi_list, day, my_data):
 
     optimized_pois = optimize_daily_route(poi_objects)
     if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(start_time=str(time.time()), travel_list=[], route=[])
-    my_data.plans[day].travel_list = [poi["id"] for poi in optimized_pois]
+        my_data.plans[day] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
+    my_data.plans[day].travel_list = [poi["poi_index"] for poi in optimized_pois]
 
     # 转换为markdown格式
-    markdown = f"### 第{day}天行程安排\n"
-    markdown += "**景点顺序:**\n"
-    for poi in optimized_pois:
-        markdown += f"- {poi['id']}: {poi.get('name', '')}\n"
+
+    #markdown = f"### 第{day}天行程安排\n"
+    #markdown += "**景点顺序:**\n"
+    #for poi in optimized_pois:
+    #    markdown += f"- {poi['id']}: {poi.get('name', '')}\n"
+
+    markdown = ""
+
+    poi_markdown = my_data.tranform_to_markdown()
+    plan_markdown = my_data.tranform_plans_to_markdown()
+    cluster_markdown = my_data.tranform_clusters_to_markdown()
+
+    markdown += cluster_markdown
+    markdown += poi_markdown
+    markdown += plan_markdown
+
     return markdown
 
 

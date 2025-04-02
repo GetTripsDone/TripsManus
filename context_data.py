@@ -222,8 +222,8 @@ class ContextData:
             return "### 注意 ###\n -当前暂时未收集到行程信息\n\n"
 
         # plan是一个数据结构
-        for idx, plan in enumerate(self.plans.items()):
-            markdown += f"### Day {idx}\n"
+        for idx, (plan_id, plan) in enumerate(self.plans.items()):
+            markdown += f"### Day {plan_id}\n"
             markdown += f"**今天出发时间：**{plan.start_time}\n"
             markdown += "**依次要经过的POI点：**\n"
             for poi in plan.travel_list:
