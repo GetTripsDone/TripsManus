@@ -12,11 +12,7 @@ from function_definitions import functions
 from prompt import system_prompt
 from context_data import ContextData, DayPlan, POI, Route
 from app.schema import Memory, Message
-<<<<<<< HEAD
-from tools_run import arrange, adjust, search_for_poi, search_for_navi, final_answer
-=======
 from think_manager import think_func
->>>>>>> 6e32f0c0bf759f2107ccffa435f420ea5ba2c858
 
 '''
     大模型function call做自主规划
