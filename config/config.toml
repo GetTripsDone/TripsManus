@@ -7,7 +7,7 @@
 #temperature = 0.0                           # Controls randomness
 
 [llm]
-model = "deepseek-v3-241226"
+model = "deepseek-v3-250324"
 base_url = "https://ark.cn-beijing.volces.com/api/v3"
 api_key = "cb9729a7-aa90-459f-8315-4ae41a6132f3"
 max_tokens = 4096
