@@ -16,9 +16,12 @@ def arrange(poi_list, day, my_data):
             poi_objects.append(poi.to_poi_dict())
 
     optimized_pois = optimize_daily_route(poi_objects)
-    if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
-    my_data.plans[day].travel_list = [poi["poi_index"] for poi in optimized_pois]
+
+    day_id = f"day{day}"
+
+    if day_id not in my_data.plans:
+        my_data.plans[day_id] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
+    my_data.plans[day_id].travel_list = [poi["poi_index"] for poi in optimized_pois]
 
     # 转换为markdown格式
 
@@ -27,18 +30,24 @@ def arrange(poi_list, day, my_data):
     #for poi in optimized_pois:
     #    markdown += f"- {poi['id']}: {poi.get('name', '')}\n"
 
-    markdown = ""
+    markdown = common_markdown(my_data)
+    return markdown
 
+def common_markdown(my_data):
+    """
+    整合所有信息，生成详细的旅行计划。
+    返回完整的markdown格式行程计划
+    """
+    markdown = ""
     poi_markdown = my_data.tranform_to_markdown()
     plan_markdown = my_data.tranform_plans_to_markdown()
-    cluster_markdown = my_data.tranform_clusters_to_markdown()
+    #cluster_markdown = my_data.tranform_clusters_to_markdown()
 
-    markdown += cluster_markdown
+    #markdown += cluster_markdown
     markdown += poi_markdown
     markdown += plan_markdown
 
     return markdown
-
 
 def adjust(new_poi_list, day, my_data):
     """
@@ -46,17 +55,23 @@ def adjust(new_poi_list, day, my_data):
     new_poi_list就是index的list
     返回markdown格式的字符串
     """
-    if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
-    my_data.plans[day].travel_list = new_poi_list
+    day_id = f"day{day}"
+
+    if day_id not in my_data.plans:
+        my_data.plans[day_id] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
+    my_data.plans[day_id].travel_list = new_poi_list
 
     # 转换为markdown格式
-    markdown = f"### 第{day}天调整后的行程\n"
+    #markdown = f"### 第{day_id}天调整后的行程\n"
+    '''
     markdown += "**调整后的景点顺序:**\n"
     for poi_id in new_poi_list:
         poi = my_data.pois.get(poi_id) or my_data.hotels.get(poi_id) or my_data.restaurants.get(poi_id)
         if poi:
             markdown += f"- {poi_id}: {poi.name}\n"
+    '''
+
+    markdown = common_markdown(my_data)
     return markdown
 
 
@@ -87,12 +102,16 @@ def search_for_poi(keyword, city_code, poi_type, my_data):
             duration=res.get('duration', 0)
         )
 
+    '''
     # 转换为markdown格式
     markdown = f"### 新增{poi_type}信息\n"
     markdown += f"**名称:** {res.get('name', '')}\n"
     markdown += f"**地址:** {res.get('address', '')}\n"
     markdown += f"**开放时间:** {res.get('opening_hours', '')}\n"
     markdown += f"**ID:** {cur_index}\n"
+    '''
+
+    markdown = common_markdown(my_data)
     return markdown
 
 
@@ -171,16 +190,18 @@ def search_for_navi(poi_list, my_data):
         if start_poi and end_poi:
             route_objects.append(Route(start_point=start_poi, end_point=end_poi))
 
+    day_id = f"day{day}"
     # Initialize or update day plan
-    if day not in my_data.plans:
-        my_data.plans[day] = DayPlan(
-            start_time=str(time.time()),
+    if day_id not in my_data.plans:
+        my_data.plans[day_id] = DayPlan(
             travel_list=poi_list,
             route=route_objects
         )
     else:
-        my_data.plans[day].route = route_objects
+        my_data.plans[day_id].route = route_objects
+        my_data.plans[day_id].is_finished = True
 
+    markdown = common_markdown(my_data)
     return markdown
 
 

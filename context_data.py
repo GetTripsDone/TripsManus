@@ -74,8 +74,10 @@ class Route(BaseModel):
 
 class DayPlan(BaseModel):
     """Represents a day plan."""
-    start_time: str
+    date: str = ""
+    start_time: str = "08:00 AM"
     end_time: str = ""
+    is_finished: bool = False
     travel_list: List[str] = Field(default_factory=list)
     route: List[Route] = Field(default_factory=list)
 
@@ -107,7 +109,20 @@ class ContextData:
     # {}...}
     plans: dict = {}
 
-    def __init__(self, cluster_dict: Dict[int, List[Dict]]):
+    def __init__(self, cluster_dict: Dict[int, List[Dict]],
+    start_time: str, end_time: str, day: str):
+        # start_time = "2025-04-04"
+
+        for i in range(int(day)):
+            day_id = f"day{i + 1}"
+            curr_date = time.mktime(time.strptime(start_time, "%Y-%m-%d")) + i * 86400
+            curr_date_str = time.strftime("%Y-%m-%d", time.localtime(curr_date))
+
+            self.plans[day_id] = DayPlan(
+                date=curr_date_str,
+                travel_list=[],
+                route=[]
+            )
 
         for cluster_id, poi_list in cluster_dict.items():
             self.clusters[cluster_id] = []
@@ -148,10 +163,10 @@ class ContextData:
     # 将 pois 转换为 markdown 的函数
     def tranform_pois_to_markdown(self):
         """Transform pois to markdown."""
-        markdown = ""
         if len(self.pois) == 0:
             return "### 注意 ###\n -当前暂时未收集到景点POI信息\n\n"
 
+        markdown = "## 景点信息如下：\n"
         for idx, (poi_id, poi) in enumerate(self.pois.items(), 1):
             markdown += f"### {poi_id}. {poi.name}\n"
             markdown += f"**地址：**{poi.address}\n"
@@ -165,9 +180,10 @@ class ContextData:
     # 将 hotels 转换为 markdown 的函数
     def tranform_hotels_to_markdown(self):
         """Transform hotels to markdown."""
-        markdown = ""
         if len(self.hotels) == 0:
             return "### 注意 ###\n -当前暂时未收集到酒店POI信息\n\n"
+
+        markdown = "## 酒店信息如下：\n"
 
         for idx, (hotel_id, hotel) in enumerate(self.hotels.items(), 1):
             markdown += f"### {hotel_id}. {hotel.name}\n"
@@ -179,10 +195,10 @@ class ContextData:
     # 将 restaurants 转换为 markdown 的函数
     def tranform_restaurants_to_markdown(self):
         """Transform restaurants to markdown."""
-        markdown = ""
         if len(self.restaurants) == 0:
             return "### 注意 ###\n -当前暂时未收集到餐厅POI信息\n\n"
 
+        markdown = "## 餐厅信息如下：\n"
         for idx, (restaurant_id, restaurant) in enumerate(self.restaurants.items(), 1):
             markdown += f"### {restaurant_id}. {restaurant.name}\n"
             markdown += f"**地址：**{restaurant.address}\n"
@@ -223,14 +239,19 @@ class ContextData:
 
         # plan是一个数据结构
         for idx, (plan_id, plan) in enumerate(self.plans.items()):
-            markdown += f"### Day {plan_id}\n"
+            markdown += f"### 第{plan_id} 日期{plan.date}\n"
             markdown += f"**今天出发时间：**{plan.start_time}\n"
             markdown += "**依次要经过的POI点：**\n"
             for poi in plan.travel_list:
                 markdown += f"- ID:{poi}\n"
             markdown += "**路线：**\n"
             for route in plan.route:
-                markdown += f"- 从{route.start_point}到{route.end_point}\n"
+                markdown += f"- 从{route.start_point.poi_index}到{route.end_point.poi_index}\n"
+
+            if plan.is_finished:
+                markdown += "**今天的行程已完成**\n"
+            else:
+                markdown += "**今天的行程未完成**\n"
 
             markdown += "---\n"  # 添加分隔线
 

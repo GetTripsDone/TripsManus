@@ -14,6 +14,7 @@ from context_data import ContextData, DayPlan, POI, Route
 from app.schema import Memory, Message
 from think_manager import think_func
 from tools_run import arrange, adjust, search_for_poi, search_for_navi, final_answer
+from app.logger import logger
 
 '''
     大模型function call做自主规划
@@ -554,24 +555,24 @@ def get_sys_prompt(context_data):
                                       )
     return sys_prompt
 
-async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
-    max_round = 10
+async def react_call_travel_plan(clustered_pois, city, start_time, end_time, day):
+    max_round = 15
     round = 0
 
-    context_data = ContextData(clustered_pois)
+    context_data = ContextData(clustered_pois, start_time, end_time, day)
 
     is_finish = False
 
     msgs = Memory()
     sys_prompt = get_sys_prompt(context_data)
-    print(f"system prompt: {sys_prompt}")
+    logger.info(f"system prompt: {sys_prompt}")
 
     sys_msg = Message.system_message(content=sys_prompt)
     msgs.add_message(Message.user_message(content=first_user_prompt.format(city=city, start_time=start_time, end_time=end_time)))
 
     while round < max_round and is_finish == False:
         round += 1
-        print(f"Executing step {round}/{max_round}")
+        logger.info(f"Executing step {round}/{max_round}")
 
         should_act, cot, tool_call = await think_func(sys_msg, msgs)
 
@@ -580,7 +581,8 @@ async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
             continue
 
         observation = act_fun(tool_call, context_data)
-        print(f"Observation: {observation}")
+        logger.info(f"step {round}/{max_round} \n Observation: \n\n{observation}")
+
         # 创建工具消息并添加到消息历史
         for call in tool_call:
             tool_msg = Message.tool_message(
@@ -601,14 +603,8 @@ async def react_call_travel_plan(clustered_pois, city, start_time, end_time):
                 break
     return
 
-
-def act_fun(tool_call, my_data):
-    if not tool_call or not tool_call[0].function or not tool_call[0].function.name:
-        return "Error: Invalid tool call format"
-
-    name = tool_call[0].function.name
-    args = json.loads(tool_call[0].function.arguments or "{}")
-
+def each_act_fun(name, args, my_data):
+    logger.info(f"start action Tool name: {name}, arguments: {args}")
     # 根据不同的function name调用对应的工具函数
     if name == "arrange":
         print('执行arrange函数')
@@ -634,6 +630,20 @@ def act_fun(tool_call, my_data):
         return f"Error: Unknown function '{name}'"
 
 
+def act_fun(tool_call, my_data):
+    if not tool_call or not tool_call[0].function or not tool_call[0].function.name:
+        return "Error: Invalid tool call format"
+
+    ret_vec = []
+    for call in tool_call:
+        name = call.function.name
+        args = json.loads(call.function.arguments or "{}")
+
+        ret = each_act_fun(name, args, my_data)
+        ret_vec.append(ret)
+
+    return ret_vec[-1]
+
 async def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
     # [SCENE_START] 黄山 [SCENE_END]
@@ -644,15 +654,17 @@ async def main(city: str, start_time: str, end_time: str):
     start_date = datetime.strptime(start_time, "%Y-%m-%d")
     end_date = datetime.strptime(end_time, "%Y-%m-%d")
     day = (end_date - start_date).days + 1  # 包含起始日期
-    print(f"旅行天数: {day}")
+    day = str(day)
+
+    logger.info(f"旅行天数: {day}")
 
     # recommend_scene_str, clusters_dict, index2poi = await get_recommend(city, day)
     # print('='*20)
     # print('clusters_dict: \n', clusters_dict)
     # print('='*20)
     clusters_dict = {1: [{'name': '圆明园遗址公园', 'location': '116.300960,40.008759', 'id': 'B000A16E89', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.8', 'duration': 2.0, 'poi_index': 'P4'}, {'name': '颐和园', 'location': '116.275179,39.999617', 'id': 'B000A7O1CU', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 3.0, 'poi_index': 'P3'}], 2: [{'name': '国家体育场', 'location': '116.395866,39.993306', 'id': 'B000A7GWO5', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 1.0, 'poi_index': 'P5'}, {'name': '南锣鼓巷', 'location': '116.402394,39.937182', 'id': 'B0FFFAH7I9', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.8', 'duration': 1.0, 'poi_index': 'P7'}, {'name': '国家游泳中心', 'location': '116.390397,39.992834', 'id': 'B000A80ZU6', 'city_code': '010', 'opentime': '07:00-20:00', 'open_time_seconds': 25200, 'close_time_seconds': 72000, 'rating': '4.7', 'duration': 1.0, 'poi_index': 'P6'}, {'name': '什刹海', 'location': '116.385281,39.941862', 'id': 'B000A7O5PK', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 2.0, 'poi_index': 'P8'}], 3: [{'name': '天坛公园', 'location': '116.410829,39.881913', 'id': 'B000A81CB2', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 2.0, 'poi_index': 'P2'}, {'name': '故宫博物院', 'location': '116.397029,39.917839', 'id': 'B000A8UIN8', 'city_code': '010', 'opentime': '08:30-16:30', 'open_time_seconds': 30600, 'close_time_seconds': 59400, 'rating': '4.9', 'duration': 4.0, 'poi_index': 'P1'}]}
-    print('clusters_dict: \n', clusters_dict)
-    await react_call_travel_plan(clusters_dict, city, start_time, end_time)
+    logger.info('clusters_dict: \n', clusters_dict)
+    await react_call_travel_plan(clusters_dict, city, start_time, end_time, day)
 
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
     # 并行分支 2.2 使用景区请求 R1/V3 获取对应 每一天的行程安排，带时间和住宿

@@ -189,20 +189,26 @@ for (day = start_day; day <= end_day; day++) {{
        }}
 
     // 阶段2：配套服务完善
-    4. 餐饮住宿规划：
-       • 调用search_for_poi获取周边餐饮酒店
-       • 调用adjust无缝插入行程
+    4. 餐饮规划：
+       • 调用search_for_poi获取每一天午餐，使用adjust插入到合理的位置
+       • 调用search_for_poi获取每一天晚餐，使用adjust插入到合理的位置
+    5. 住宿酒店规划：
+       • 调用search_for_poi获取每一天住宿的酒店，使用adjust插入到合理的位置
 
     // 阶段3：交通路线优化
-    5. 调用search_for_navi进行：
+    6. 调用search_for_navi进行：
        • 路径规划
        • 交通方式选择
        • 耗时计算
 }}
 
 // 最终交付
-6. 调用final_answer生成完整行程
+7. 调用final_answer生成完整行程
 ```
+
+## ** 注意事项 **
+ - 你需要先简单思考，当前你需要干什么，然后再决定调用哪个工具。
+
 """
 
 system_prompt = """
@@ -226,19 +232,21 @@ for (day = start_day; day <= end_day; day++) {{
        }}
 
     // 阶段2：配套服务完善
-    4. 餐饮住宿规划：
-       • 调用search_for_poi获取周边餐饮酒店
-       • 调用adjust无缝插入行程
+    4. 餐饮规划：
+       • 调用search_for_poi获取每一天午餐，使用adjust插入到合理的位置
+       • 调用search_for_poi获取每一天晚餐，使用adjust插入到合理的位置
+    5. 住宿酒店规划：
+       • 调用search_for_poi获取每一天住宿的酒店，使用adjust插入到合理的位置
 
     // 阶段3：交通路线优化
-    5. 调用search_for_navi进行：
+    6. 调用search_for_navi进行：
        • 路径规划
        • 交通方式选择
        • 耗时计算
 }}
 
 // 最终交付
-6. 调用final_answer生成完整行程
+7. 调用final_answer生成完整行程
 ```
 
 ## 三、工具使用规范

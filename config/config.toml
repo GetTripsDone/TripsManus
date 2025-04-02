@@ -11,7 +11,7 @@ model = "deepseek-v3-250324"
 base_url = "https://ark.cn-beijing.volces.com/api/v3"
 api_key = "cb9729a7-aa90-459f-8315-4ae41a6132f3"
 max_tokens = 4096
-temperature = 0.0
+temperature = 1.0
 
 #[llm]
 #model = "qwen2.5-72b-instruct"
