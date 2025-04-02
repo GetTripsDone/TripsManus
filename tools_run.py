@@ -6,7 +6,8 @@ def arrange(poi_list, day, my_data):
     计算景点的初始游玩顺序，根据位置和游玩时间生成每日行程。
     """
     optimized_pois = optimize_daily_route(poi_list)  # selected_pois只是按照分数选择出满足游玩时间的poi，但是没有按照order
-    my_data.arrange_ment[day] = optimized_pois
+    # my_data.arrange_ment[day] = optimized_pois
+    my_data.cluster[day][] = optimized_pois
     return optimized_pois
 
 

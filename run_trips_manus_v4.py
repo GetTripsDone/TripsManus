@@ -594,13 +594,11 @@ async def main(city: str, start_time: str, end_time: str):
     # [SCENE_START] 黄山 [SCENE_END]
     # TDOO 推荐点 [P1_START] 邯郸博物馆 [P1_END]
     # 输出 P1 P2 P3的景点
-    my_data = ContextData
     day = 3
     recommend_scene_str, clusters_dict, index2poi = await get_recommend(city, day)
     print('clusters_dict: \n', clusters_dict)
     print('index2poi: \n', index2poi)
-    my_data.clusters = clusters_dict
-    my_data.pois = index2poi
+    my_data = ContextData(clusters_dict)
 
     # Define functions for LLM function calling
 
