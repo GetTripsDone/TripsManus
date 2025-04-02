@@ -255,15 +255,24 @@ def execute_navi(
         "key": mykey,
         "show_fields": 'cost'
     }
-
     result = []
     try:
         response = requests.get(url, params=params)
         time.sleep(1)
         result = response.json()
+        print('result: ', result)
         if result.get("status") == "1":
-            duration = result['route']['transits'][0]['cost']['duration']
-            distance = result['route']['transits'][0]['distance']
+            if result['route']['transits'] != []:
+                distance = result['route']['transits'][0]['distance']
+                if 'duration' in result['route']['transits'][0]['cost']:
+                    duration = result['route']['transits'][0]['cost']['duration']
+                else:
+                    # 假设步行速度为1.2米/秒，将距离(米)转换为分钟
+                    print('distance: ', distance)
+                    duration = float(distance) / (1.2 * 60)
+            else:
+                distance = result['route']['distance']
+                duration = float(distance) / (1.2 * 60)
             return [duration, distance]
         else:
             return []
