@@ -179,4 +179,92 @@ def generate_timeline(ordered_pois: List[Dict], travel_time_matrix: np.ndarray) 
     return timeline
 
 
+def execute(
+        keywords: str,
+        city_code: str,
+    ) -> Dict[str, str]:
+    url = "https://restapi.amap.com/v5/place/text"
+    params = {
+        "keywords": keywords,
+        "key": '777e65792758b03da95607d112079834',
+        "region": city_code,
+        "show_fields": "business,opentime_today,rating"
+    }
 
+    try:
+        response = requests.get(url, params=params)
+        time.sleep(1)
+        result = response.json()
+        if result.get("status") == "1":
+            return result
+        else:
+            return {"error": f"搜索失败: {result.get('info')}"}
+    except Exception as e:
+        return {"error": f"请求失败: {str(e)}"}
+
+
+def parse_res(res, duration=None):
+    result = res['pois']
+    if not result:
+        return {}
+    result = result[0]
+    opentime = result['business'].get('opentime_today', '9:00-18:00')
+    # 验证时间格式是否符合x:xx-x:xx格式
+    import re
+    if not re.match(r'^\d{1,2}:\d{2}-\d{1,2}:\d{2}$', opentime):
+        opentime = '9:00-18:00'
+    open_time_seconds, close_time_seconds = parse_time_str(opentime)
+    return {
+        'name': result['name'],
+        'location': result['location'],
+        'id': result['id'],
+        'city_code': result['citycode'],
+        'opentime': opentime,
+        'open_time_seconds': open_time_seconds,
+        'close_time_seconds': close_time_seconds,
+        'rating': result['business'].get('rating', '4.5'),
+        'duration': float(duration) if duration else 1.0  # 使用传入的游玩时长，默认1小时
+    }
+
+def parse_time_str(time_str: str) -> tuple:
+    '''将时间字符串转换为秒数'''
+    try:
+        start_time, end_time = time_str.split('-')
+        start_hour, start_minute = map(int, start_time.split(':'))
+        end_hour, end_minute = map(int, end_time.split(':'))
+        return (start_hour * 3600 + start_minute * 60,
+                end_hour * 3600 + end_minute * 60)
+    except:
+        return (9 * 3600, 18 * 3600)  # 默认9:00-18:00
+
+
+def execute_navi(
+    origin: str,
+    destination: str,
+    city1: str,
+    city2: str,
+):
+    url = "https://restapi.amap.com/v5/direction/transit/integrated"
+    mykey = '8ef18770408aef7848eac18e09ec0a17'
+    params = {
+        "origin": origin,
+        "destination": destination,
+        "city1": city1,
+        "city2": city2,
+        "key": mykey,
+        "show_fields": 'cost'
+    }
+
+    result = []
+    try:
+        response = requests.get(url, params=params)
+        time.sleep(1)
+        result = response.json()
+        if result.get("status") == "1":
+            duration = result['route']['transits'][0]['cost']['duration']
+            distance = result['route']['transits'][0]['distance']
+            return [duration, distance]
+        else:
+            return []
+    except Exception as e:
+        return []

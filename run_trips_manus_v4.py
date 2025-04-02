@@ -13,6 +13,7 @@ from function_definitions import functions
 from prompt import system_prompt
 from context_data import ContextData, DayPlan, POI, Route
 from app.schema import Memory, Message
+from tools_run import arrange, adjust, search_for_poi, search_for_navi, final_answer
 
 '''
     大模型function call做自主规划
@@ -638,19 +639,21 @@ async def main(city: str, start_time: str, end_time: str):
             elif function_name == "adjust":
                 adjustment_type = function_args["type"]
                 new_poi_list = function_args["new_poi_list"]
+                day = function_args["day"]
                 # Call adjust function
-                adjusted_pois = adjust(adjustment_type, new_poi_list)
+                adjusted_pois = adjust(adjustment_type, new_poi_list, day, my_data)
 
             elif function_name == "search_for_poi":
                 keyword = function_args["keyword"]
                 city_code = function_args["city_code"]
+                poi_type = function_args["type"]
                 # Call search_for_poi function
-                search_results = search_for_poi(keyword, city_code)
+                search_results = search_for_poi(keyword, city_code, poi_type, my_data)
 
             elif function_name == "search_for_navi":
                 poi_list = function_args["poi_list"]
                 # Call search_for_navi function
-                navi_results = search_for_navi(poi_list)
+                navi_results = search_for_navi(poi_list, my_data)
 
             elif function_name == "final_answer":
                 answer = function_args["answer"]

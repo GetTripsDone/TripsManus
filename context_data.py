@@ -89,6 +89,7 @@ class ContextData:
     restaurants: dict = {}
     # {"C1": [P1, P2...], ...}
     clusters: dict = {}
+
     # {"day1": {"start_time": "2021-01-01 00:00:00",
     #           "travel_list" : [P1, P2...],
     #           "route": [{"start_point": P1,

@@ -47,9 +47,13 @@ functions = [
                         "required": []
                     },
                     "description": "重新调整后的排好序的POI index列表"
+                },
+                "day": {
+                    "type": "integer",
+                    "description": "第几天的安排"
                 }
             },
-            "required": ["type", "new_poi_list"]
+            "required": ["type", "new_poi_list", "day"]
         }
     },
     {
