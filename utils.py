@@ -116,7 +116,9 @@ def optimize_daily_route(daily_pois: List[Dict]) -> List[Dict]:
         # 设置更合理的时间窗口范围
         earliest_time = max(9 * 3600, open_time)
         latest_time = min(18 * 3600, close_time)
-
+        print('---------herere--------')
+        print(type(earliest_time), type(latest_time))
+        print(earliest_time, latest_time)
         time_dimension.CumulVar(index).SetRange(
             earliest_time,
             latest_time
