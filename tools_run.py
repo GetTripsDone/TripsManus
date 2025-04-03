@@ -23,15 +23,8 @@ def arrange(poi_list, day, my_data):
         my_data.plans[day_id] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
     my_data.plans[day_id].travel_list = [poi["poi_index"] for poi in optimized_pois]
 
-    # 转换为markdown格式
-
-    #markdown = f"### 第{day}天行程安排\n"
-    #markdown += "**景点顺序:**\n"
-    #for poi in optimized_pois:
-    #    markdown += f"- {poi['id']}: {poi.get('name', '')}\n"
-
-    markdown = common_markdown(my_data)
-    return markdown
+    # 返回包含指定字段的字典
+    return ('arrange', day, [f"{poi['poi_index']} {poi['name']}" for poi in optimized_pois])
 
 def common_markdown(my_data):
     """
@@ -61,21 +54,11 @@ def adjust(new_poi_list, day, my_data):
         my_data.plans[day_id] = DayPlan(start_time="08:00 AM", travel_list=[], route=[])
     my_data.plans[day_id].travel_list = new_poi_list
 
-    # 转换为markdown格式
-    #markdown = f"### 第{day_id}天调整后的行程\n"
-    '''
-    markdown += "**调整后的景点顺序:**\n"
-    for poi_id in new_poi_list:
-        poi = my_data.pois.get(poi_id) or my_data.hotels.get(poi_id) or my_data.restaurants.get(poi_id)
-        if poi:
-            markdown += f"- {poi_id}: {poi.name}\n"
-    '''
-
-    markdown = common_markdown(my_data)
-    return markdown
+    # 返回包含指定字段的字典
+    return ('adjust', day, new_poi_list)
 
 
-def search_for_poi(keyword, city_code, poi_type, my_data):
+def search_for_poi(keyword, city_code, poi_type, day, my_data):
     """
     搜索景点附近的酒店或餐厅。
     返回markdown格式的字符串
@@ -124,17 +107,13 @@ def search_for_poi(keyword, city_code, poi_type, my_data):
             poi_index=cur_index
         )
 
-    '''
-    # 转换为markdown格式
-    markdown = f"### 新增{poi_type}信息\n"
-    markdown += f"**名称:** {res.get('name', '')}\n"
-    markdown += f"**地址:** {res.get('address', '')}\n"
-    markdown += f"**开放时间:** {res.get('opening_hours', '')}\n"
-    markdown += f"**ID:** {cur_index}\n"
-    '''
-
-    markdown = common_markdown(my_data)
-    return markdown
+    # 返回包含指定字段的字典
+    return ('search_for_poi', day, {
+        'name': res.get('name', ''),
+        'poi_index': res.get('poi_index', ''),
+        'opening_hours': res.get('opening_hours', ''),
+        'rating': res.get('rating', '')
+    })
 
 
 def get_poi_by_id(my_data, poi_id):
@@ -228,9 +207,85 @@ def search_for_navi(day, poi_list, my_data):
         my_data.plans[day_id].route = route_objects
         my_data.plans[day_id].is_finished = True
 
-    markdown = common_markdown(my_data)
-    return markdown
+    # 返回包含指定字段的字典
+    return ('search_for_navi', day, routes)
 
+
+async def act_fun(tool_calls, context_data):
+    """
+    异步处理多个工具调用
+    """
+    results = []
+    for tool_call in tool_calls:
+        name = tool_call.function.name
+        args = json.loads(tool_call.function.arguments)
+
+        if name == "arrange":
+            result = arrange(args["poi_list"], args["day"], context_data)
+        elif name == "adjust":
+            result = adjust(args["new_poi_list"], args["day"], context_data)
+        elif name == "search_for_poi":
+            result = search_for_poi(args["keyword"], args["city_code"], args["type"], args["day"], context_data)  # 三元组，function、day、poi
+        elif name == "search_for_navi":
+            result = search_for_navi(args["day"], args["poi_list"], context_data)
+        elif name == "final_answer":
+            result = final_answer(context_data)
+        else:
+            result = f"Unknown tool: {name}"
+
+        results.append(result)
+    # 按function_name分组整合结果
+    grouped_results = {}
+    for result in results:
+        if isinstance(result, tuple) and len(result) == 3:
+            function_name, day, data = result
+            if function_name not in grouped_results:
+                grouped_results[function_name] = []
+            grouped_results[function_name].append({"day": day, "data": data})
+
+    # 构建结构化的返回字符串
+    output = []
+    for function_name, items in grouped_results.items():
+        if function_name == 'search_for_poi':
+            output.append("search_for_poi找到的酒店和饭店为：")
+            # 按天数分组POI信息
+            day_pois = {}
+            for item in items:
+                day = item['day']
+                if day not in day_pois:
+                    day_pois[day] = []
+                if isinstance(item['data'], dict):
+                    day_pois[day].append(f"- {item['data']['name']} ({item['data']['poi_index']})")
+
+            # 按天数顺序输出
+            for day in sorted(day_pois.keys()):
+                output.append(f"第{day}天：")
+                output.extend(day_pois[day])
+                output.append("")
+        elif function_name == 'arrange':
+            output.append("arrange为每天安排的先后要去的景点依次为：")
+            for item in items:
+                output.append(f"day{item['day']}: {item['data']}")
+            output.append("")
+        elif function_name == 'search_for_navi':
+            output.append("search_for_navi的导航结果为：")
+            for item in items:
+                output.append(f"第{item['day']}天：")
+                for route in item['data']:
+                    output.append(f"- 从 {route['start_point']} 到 {route['end_point']}")
+                    output.append(f"  距离: {route['distance']/1000:.1f}公里, 时间: {route['duration']/60:.1f}分钟")
+                output.append("")
+        elif function_name == 'adjust':
+            output.append("adjust调整后的行程顺序为：")
+            for item in items:
+                output.append(f"day{item['day']}: {item['data']}")
+            output.append("")
+        elif function_name == 'final_answer':
+            output.append("final_answer的最终答案为：")
+            output.append(context_data.tranform_plans_to_markdown)
+        else:
+            output.append(f"Unknown function: {function_name}")
+    return "\n".join(output)
 
 def final_answer(my_data):
     """

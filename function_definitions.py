@@ -75,8 +75,12 @@ functions = [
                     "enum": ["hotel", "restaurant"],
                     "description": "搜索的POI类型，hotel: 酒店，restaurant: 餐厅"
                 },
+                "day": {
+                    "type": "integer",
+                    "description": "当前搜索的点应插入到第几天的行程中"
+                }
             },
-            "required": ["keyword", "city_code", "type"]
+            "required": ["keyword", "city_code", "type", "day"]
         }
     },
     {

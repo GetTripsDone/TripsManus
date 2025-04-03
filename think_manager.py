@@ -13,11 +13,6 @@ llm_model = LLM(config_name="tool_call_llm")
 async def think_func(sys_msg, msgs):
     should_act = False
     tool_calls = []
-
-    msgs.add_message(Message.user_message(next_prompt))
-
-    json_dict = msgs.to_dict_list()
-
     final_functions = []
     for item in functions:
         new_format = {
@@ -26,8 +21,6 @@ async def think_func(sys_msg, msgs):
         }
 
         final_functions.append(new_format)
-
-    #logger.info(f"tool call messages is {json.dumps(json_dict, ensure_ascii=False)} \n\ntools {json.dumps(final_functions, ensure_ascii=False)}")
 
     response = await llm_model.ask_tool(
         messages=msgs.messages,

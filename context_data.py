@@ -169,10 +169,9 @@ class ContextData:
         markdown = "## 景点信息如下：\n"
         for idx, (poi_id, poi) in enumerate(self.pois.items(), 1):
             markdown += f"### {poi_id}. {poi.name}\n"
-            markdown += f"**地址：**{poi.address}\n"
             markdown += f"**开放时间：**{poi.opening_hours}\n"
             # 游玩时长
-            markdown += f"**游玩时长：**{poi.duration}小时\n"
+            markdown += f"**预计游玩时长：**{poi.duration}小时\n"
             markdown += "---\n"  # 添加分隔线
 
         return markdown
@@ -187,7 +186,6 @@ class ContextData:
 
         for idx, (hotel_id, hotel) in enumerate(self.hotels.items(), 1):
             markdown += f"### {hotel_id}. {hotel.name}\n"
-            markdown += f"**地址：**{hotel.address}\n"
             markdown += f"**开放时间：**{hotel.opening_hours}\n"
             markdown += "---\n"  # 添加分隔线
         return markdown
@@ -201,7 +199,6 @@ class ContextData:
         markdown = "## 餐厅信息如下：\n"
         for idx, (restaurant_id, restaurant) in enumerate(self.restaurants.items(), 1):
             markdown += f"### {restaurant_id}. {restaurant.name}\n"
-            markdown += f"**地址：**{restaurant.address}\n"
             markdown += f"**开放时间：**{restaurant.opening_hours}\n"
             markdown += "---\n"  # 添加分隔线
         return markdown
@@ -222,7 +219,7 @@ class ContextData:
 
         # cluster 是一个poi列表，需要把他们的id打印成一行
         for idx, (cluster_id, cluster) in enumerate(self.clusters.items(), 1):
-            markdown += f"### ** 地点聚类 ** C{cluster_id}.\n"
+            markdown += f"### ** 按照地点位置聚类的所有景点为 ** C{cluster_id}.\n"
             for poi in cluster:
                 markdown += f"{poi} "
             markdown += "\n"
