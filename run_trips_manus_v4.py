@@ -556,7 +556,8 @@ def get_sys_prompt(context_data):
     return sys_prompt
 
 async def react_call_travel_plan(clustered_pois, city, start_time, end_time, day):
-    max_round = 15
+    # max_round = 15
+    max_round = 30
     round = 0
 
     context_data = ContextData(clustered_pois, start_time, end_time, day)
@@ -687,9 +688,9 @@ async def main(city: str, start_time: str, end_time: str):
     return
 
 if __name__ == "__main__":
-    city = "伊春"
+    city = "兰州"
     start_time = "2025-04-04"
-    end_time = "2025-04-05"
+    end_time = "2025-04-06"
 
     import asyncio
     asyncio.run(main(city, start_time, end_time))
