@@ -556,7 +556,7 @@ def get_sys_prompt(context_data):
     return sys_prompt
 
 async def react_call_travel_plan(clustered_pois, city, start_time, end_time, day):
-    max_round = 30
+    max_round = 60
     round = 0
 
     context_data = ContextData(clustered_pois, start_time, end_time, day)
@@ -689,7 +689,7 @@ async def main(city: str, start_time: str, end_time: str):
     return
 
 if __name__ == "__main__":
-    city = "三亚市"
+    city = "上海"
     start_time = "2025-04-04"
     end_time = "2025-04-10"
 

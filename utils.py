@@ -227,7 +227,15 @@ def parse_res(res, duration=None):
     result = res['pois']
     if not result:
         return {}
-    result = result[0]
+
+    # 随机选择一个POI
+    import random
+    poi_count = len(result)
+    if poi_count > 0:
+        result = result[random.randint(0, poi_count - 1)]
+    else:
+        return {}
+
     opentime = result['business'].get('opentime_today', '9:00-18:00')
     # 验证时间格式是否符合x:xx-x:xx格式
     import re
