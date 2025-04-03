@@ -109,6 +109,24 @@ def optimize_daily_route(daily_pois: List[Dict]) -> List[Dict]:
         # 为每个POI设置更宽松的时间窗口
         open_time = daily_pois[poi_idx]['open_time_seconds']
         close_time = daily_pois[poi_idx]['close_time_seconds']
+
+        # 设置更宽松的时间窗口范围
+        earliest_time = max(8 * 3600, open_time - 3600)  # 允许提前1小时到达
+        latest_time = min(20 * 3600, close_time + 3600)  # 允许延后1小时离开
+
+        try:
+            time_dimension.CumulVar(index).SetRange(
+                int(earliest_time),  # 确保使用整数
+                int(latest_time)     # 确保使用整数
+            )
+        except Exception as e:
+            # 如果设置失败，使用更宽松的默认时间窗口
+            time_dimension.CumulVar(index).SetRange(
+                8 * 3600,   # 早上8点
+                20 * 3600   # 晚上8点
+            )
+
+        '''
         # 确保时间窗口至少有2小时的间隔
         if close_time - open_time < 2 * 3600:
             close_time = open_time + 2 * 3600
@@ -120,6 +138,7 @@ def optimize_daily_route(daily_pois: List[Dict]) -> List[Dict]:
             earliest_time,
             latest_time
         )
+        '''
 
         # 设置访问时长
         if poi_idx > 0:  # 跳过起点

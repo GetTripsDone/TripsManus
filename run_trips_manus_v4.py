@@ -147,7 +147,7 @@ def cluster_pois(poi_infos: List[Dict], n_clusters: int = 3) -> Dict[int, List[D
 async def get_recommend(city: str, day: int):
     global v3
     prompt = f"""
-    请你根据游玩天数{day}，合理推荐{city}值得一去的景点
+    推荐{city}值得一去的景点，尽可能多的
 
     输入格式：markdown
     景点名称按照顺序进行标号：[PX_START] 景点名称 [PX_END]，X是景点编号
@@ -556,7 +556,7 @@ def get_sys_prompt(context_data):
     return sys_prompt
 
 async def react_call_travel_plan(clustered_pois, city, start_time, end_time, day):
-    max_round = 15
+    max_round = 30
     round = 0
 
     context_data = ContextData(clustered_pois, start_time, end_time, day)
@@ -574,7 +574,7 @@ async def react_call_travel_plan(clustered_pois, city, start_time, end_time, day
         round += 1
         logger.info(f"Executing step {round}/{max_round}")
 
-        should_act, cot, tool_call = await think_func(sys_msg, msgs)
+        should_act, cot, tool_call = await think_func(sys_msg, msgs, round)
 
         if not should_act:
             print("Thinking complete - no action needed")
@@ -619,14 +619,17 @@ def each_act_fun(name, args, my_data):
     elif name == "search_for_poi":
         keyword = args.get("keyword", "")
         city_code = args.get("city_code", "")
-        poi_type = args.get("poi_type", "")
+        poi_type = args.get("type", "")
         return search_for_poi(keyword, city_code, poi_type, my_data)
     elif name == "search_for_navi":
         poi_list = args.get("poi_list", [])
         day = args.get("day", 1)
         return search_for_navi(day, poi_list, my_data)
     elif name == "final_answer":
-        return final_answer(my_data)
+        ret = final_answer(my_data)
+
+        logger.info(f"final_answer: {ret}")
+        return ret
     else:
         return f"Error: Unknown function '{name}'"
 
@@ -635,15 +638,14 @@ def act_fun(tool_call, my_data):
     if not tool_call or not tool_call[0].function or not tool_call[0].function.name:
         return "Error: Invalid tool call format"
 
-    ret_vec = []
     for call in tool_call:
         name = call.function.name
         args = json.loads(call.function.arguments or "{}")
 
         ret = each_act_fun(name, args, my_data)
-        ret_vec.append(ret)
 
-    return ret_vec[-1]
+    final_ret = my_data.get_current_state()
+    return final_ret
 
 async def main(city: str, start_time: str, end_time: str):
     # 1. 根据输入query获取推荐的景区
@@ -687,9 +689,9 @@ async def main(city: str, start_time: str, end_time: str):
     return
 
 if __name__ == "__main__":
-    city = "伊春"
+    city = "三亚市"
     start_time = "2025-04-04"
-    end_time = "2025-04-05"
+    end_time = "2025-04-10"
 
     import asyncio
     asyncio.run(main(city, start_time, end_time))

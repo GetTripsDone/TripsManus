@@ -238,22 +238,43 @@ class ContextData:
             return "### 注意 ###\n -当前暂时未收集到行程信息\n\n"
 
         # plan是一个数据结构
+        last_doing_day = -1
         for idx, (plan_id, plan) in enumerate(self.plans.items()):
-            markdown += f"### 第{plan_id} 日期{plan.date}\n"
-            markdown += f"**今天出发时间：**{plan.start_time}\n"
-            markdown += "**依次要经过的POI点：**\n"
-            for poi in plan.travel_list:
-                markdown += f"- ID:{poi}\n"
-            markdown += "**路线：**\n"
+            finish_str = "(等待开始)"
+
+            if plan.is_finished:
+                finish_str = "(完成)"
+            else:
+                finish_str = "(进行中)"
+
+                if last_doing_day == -1:
+                    last_doing_day = idx
+
+                if idx > last_doing_day:
+                    finish_str = "(等待开始)"
+
+            markdown += f"### 第{plan_id} 日期{plan.date} 状态{finish_str}\n"
+            markdown += f"**出发时间：**{plan.start_time}\n"
+            markdown += "**依次经过的地点：**\n"
+            poi_id_str = ""
+            for poi_id in plan.travel_list:
+                poi_id_str += f"{poi_id} "
+
+            markdown += f" -{poi_id_str}\n"
+
+            markdown += "**出行路线：**\n"
             for route in plan.route:
                 markdown += f"- 从{route.start_point.poi_index}到{route.end_point.poi_index}\n"
 
-            if plan.is_finished:
-                markdown += "**今天的行程已完成**\n"
-            else:
-                markdown += "**今天的行程未完成**\n"
-
             markdown += "---\n"  # 添加分隔线
+
+        return markdown
+
+    def get_current_state(self):
+        markdown = ""
+        markdown += self.tranform_to_markdown()
+        markdown += self.tranform_clusters_to_markdown()
+        markdown += self.tranform_plans_to_markdown()
 
         return markdown
 

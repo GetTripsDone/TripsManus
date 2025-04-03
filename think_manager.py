@@ -3,18 +3,19 @@ import sys
 import json
 from app.llm import LLM
 from app.logger import logger
-from app.schema import Message
+from app.schema import Message, ToolCall, Function
 from function_definitions import functions
 import json
 from prompt import next_prompt
 
 llm_model = LLM(config_name="tool_call_llm")
 
-async def think_func(sys_msg, msgs):
+async def think_func(sys_msg, msgs, round):
     should_act = False
     tool_calls = []
 
-    msgs.add_message(Message.user_message(next_prompt))
+    if round > 1:
+        msgs.add_message(Message.user_message(next_prompt))
 
     json_dict = msgs.to_dict_list()
 
@@ -41,6 +42,7 @@ async def think_func(sys_msg, msgs):
         tool_calls = response.tool_calls
     else:
         logger.info(f"tool call response not have tool calls")
+        '''
         if response and response.content:
             # 判断结果最后是否包含上述json结构，包含的话，就将json内部的信息解析成 toolcall 的形式加入 curr_tool_calls
             if "```json" in response.content and "```" in response.content:
@@ -56,6 +58,7 @@ async def think_func(sys_msg, msgs):
                 )
 
                 tool_calls.append(tool_call)
+        '''
 
     content = response.content if response and response.content else ""
 
