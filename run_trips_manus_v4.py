@@ -171,7 +171,7 @@ async def get_recommend(city: str, day: int):
         if not poi_name:
             continue
         sections.append(section)
-        print(f"收到新的景点信息:\n{section}\n")
+        logger.info(f"收到新的景点信息:\n{section}\n")
 
         # 从section中提取预估游玩时长
         import re
@@ -186,10 +186,10 @@ async def get_recommend(city: str, day: int):
         poi_info['poi_index'] = f'P{poi_counter}'
         poi_counter += 1
         poi_info_list.append(poi_info)
-        print(f"收到新的POI检索信息:\n{poi_info}\n")
+        logger.info(f"收到新的POI检索信息:\n{poi_info}\n")
 
     # 对POI进行聚类
-    days = day  # 可以根据实际需求调整聚类天数
+    days = int(day)  # 可以根据实际需求调整聚类天数
     clustered_pois = cluster_pois(poi_info_list, days)
 
     # 创建index2poi字典
@@ -659,12 +659,12 @@ async def main(city: str, start_time: str, end_time: str):
 
     logger.info(f"旅行天数: {day}")
 
-    # recommend_scene_str, clusters_dict, index2poi = await get_recommend(city, day)
+    recommend_scene_str, clusters_dict, index2poi = await get_recommend(city, day)
     # print('='*20)
     # print('clusters_dict: \n', clusters_dict)
     # print('='*20)
-    clusters_dict = {1: [{'name': '圆明园遗址公园', 'location': '116.300960,40.008759', 'id': 'B000A16E89', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.8', 'duration': 2.0, 'poi_index': 'P4'}, {'name': '颐和园', 'location': '116.275179,39.999617', 'id': 'B000A7O1CU', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 3.0, 'poi_index': 'P3'}], 2: [{'name': '国家体育场', 'location': '116.395866,39.993306', 'id': 'B000A7GWO5', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 1.0, 'poi_index': 'P5'}, {'name': '南锣鼓巷', 'location': '116.402394,39.937182', 'id': 'B0FFFAH7I9', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.8', 'duration': 1.0, 'poi_index': 'P7'}, {'name': '国家游泳中心', 'location': '116.390397,39.992834', 'id': 'B000A80ZU6', 'city_code': '010', 'opentime': '07:00-20:00', 'open_time_seconds': 25200, 'close_time_seconds': 72000, 'rating': '4.7', 'duration': 1.0, 'poi_index': 'P6'}, {'name': '什刹海', 'location': '116.385281,39.941862', 'id': 'B000A7O5PK', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 2.0, 'poi_index': 'P8'}], 3: [{'name': '天坛公园', 'location': '116.410829,39.881913', 'id': 'B000A81CB2', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 2.0, 'poi_index': 'P2'}, {'name': '故宫博物院', 'location': '116.397029,39.917839', 'id': 'B000A8UIN8', 'city_code': '010', 'opentime': '08:30-16:30', 'open_time_seconds': 30600, 'close_time_seconds': 59400, 'rating': '4.9', 'duration': 4.0, 'poi_index': 'P1'}]}
-    logger.info('clusters_dict: \n', clusters_dict)
+    #clusters_dict = {1: [{'name': '圆明园遗址公园', 'location': '116.300960,40.008759', 'id': 'B000A16E89', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.8', 'duration': 2.0, 'poi_index': 'P4'}, {'name': '颐和园', 'location': '116.275179,39.999617', 'id': 'B000A7O1CU', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 3.0, 'poi_index': 'P3'}], 2: [{'name': '国家体育场', 'location': '116.395866,39.993306', 'id': 'B000A7GWO5', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 1.0, 'poi_index': 'P5'}, {'name': '南锣鼓巷', 'location': '116.402394,39.937182', 'id': 'B0FFFAH7I9', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.8', 'duration': 1.0, 'poi_index': 'P7'}, {'name': '国家游泳中心', 'location': '116.390397,39.992834', 'id': 'B000A80ZU6', 'city_code': '010', 'opentime': '07:00-20:00', 'open_time_seconds': 25200, 'close_time_seconds': 72000, 'rating': '4.7', 'duration': 1.0, 'poi_index': 'P6'}, {'name': '什刹海', 'location': '116.385281,39.941862', 'id': 'B000A7O5PK', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 2.0, 'poi_index': 'P8'}], 3: [{'name': '天坛公园', 'location': '116.410829,39.881913', 'id': 'B000A81CB2', 'city_code': '010', 'opentime': '9:00-18:00', 'open_time_seconds': 32400, 'close_time_seconds': 64800, 'rating': '4.9', 'duration': 2.0, 'poi_index': 'P2'}, {'name': '故宫博物院', 'location': '116.397029,39.917839', 'id': 'B000A8UIN8', 'city_code': '010', 'opentime': '08:30-16:30', 'open_time_seconds': 30600, 'close_time_seconds': 59400, 'rating': '4.9', 'duration': 4.0, 'poi_index': 'P1'}]}
+    #logger.info('clusters_dict: \n', clusters_dict)
     await react_call_travel_plan(clusters_dict, city, start_time, end_time, day)
 
     # 并行分支 2.1 使用prompt 抽取 json 的 poi名称，请求高德，返回给端上
@@ -687,9 +687,9 @@ async def main(city: str, start_time: str, end_time: str):
     return
 
 if __name__ == "__main__":
-    city = "北京"
+    city = "伊春"
     start_time = "2025-04-04"
-    end_time = "2025-04-06"
+    end_time = "2025-04-05"
 
     import asyncio
     asyncio.run(main(city, start_time, end_time))
